@@ -172,42 +172,17 @@
               >
                 <template #renderItem="{ item, index }">
                   <a-list-item>
-                    <a-card :title="item.name" size="small" class="attraction-card">
-                      <!-- 编辑模式下的操作按钮 -->
-                      <template #extra v-if="editMode">
-                        <a-space>
-                          <a-button
-                            size="small"
-                            @click="moveAttraction(day.day_index, index, 'up')"
-                            :disabled="index === 0"
-                          >
-                            ↑
-                          </a-button>
-                          <a-button
-                            size="small"
-                            @click="moveAttraction(day.day_index, index, 'down')"
-                            :disabled="index === day.attractions.length - 1"
-                          >
-                            ↓
-                          </a-button>
-                          <a-button
-                            size="small"
-                            danger
-                            @click="deleteAttraction(day.day_index, index)"
-                          >
-                            🗑️
-                          </a-button>
-                        </a-space>
-                      </template>
+                    <div class="attraction-card-container">
+                      <!-- 背景图片 -->
+                      <img
+                        :src="getAttractionImage(item.name, index)"
+                        :alt="item.name"
+                        class="attraction-bg-image"
+                        @error="handleImageError"
+                      />
 
-                      <!-- 景点图片 -->
-                      <div class="attraction-image-wrapper">
-                        <img
-                          :src="getAttractionImage(item.name, index)"
-                          :alt="item.name"
-                          class="attraction-image"
-                          @error="handleImageError"
-                        />
+                      <!-- 顶部角标层 -->
+                      <div class="attraction-top-badges">
                         <div class="attraction-badge">
                           <span class="badge-number">{{ index + 1 }}</span>
                         </div>
@@ -216,26 +191,71 @@
                         </div>
                       </div>
 
-                      <!-- 编辑模式下可编辑的字段 -->
-                      <div v-if="editMode">
-                        <p><strong>地址:</strong></p>
-                        <a-input v-model:value="item.address" size="small" style="margin-bottom: 8px" />
+                      <!-- 底部信息液态玻璃层 -->
+                      <div class="attraction-info-overlay">
+                        <LiquidGlass
+                          :displacement-scale="40"
+                          :blur-amount="0.15"
+                          :saturation="120"
+                          :aberration-intensity="2"
+                          :elasticity="0.1"
+                          :corner-radius="24"
+                          style="width: 100%;"
+                        >
+                          <div class="attraction-content-glass">
+                            <div class="attraction-header">
+                              <h3 class="attraction-title">{{ item.name }}</h3>
+                              <!-- 编辑模式下的操作按钮 -->
+                              <a-space v-if="editMode" class="attraction-actions">
+                                <a-button
+                                  size="small"
+                                  @click="moveAttraction(day.day_index, index, 'up')"
+                                  :disabled="index === 0"
+                                >
+                                  ↑
+                                </a-button>
+                                <a-button
+                                  size="small"
+                                  @click="moveAttraction(day.day_index, index, 'down')"
+                                  :disabled="index === day.attractions.length - 1"
+                                >
+                                  ↓
+                                </a-button>
+                                <a-button
+                                  size="small"
+                                  danger
+                                  @click="deleteAttraction(day.day_index, index)"
+                                >
+                                  🗑️
+                                </a-button>
+                              </a-space>
+                            </div>
 
-                        <p><strong>游览时长(分钟):</strong></p>
-                        <a-input-number v-model:value="item.visit_duration" :min="10" :max="480" size="small" style="width: 100%; margin-bottom: 8px" />
+                            <div class="attraction-body" :class="{ 'edit-mode': editMode }">
+                              <!-- 编辑模式下可编辑的字段 -->
+                              <div v-if="editMode">
+                                <p><strong>地址:</strong></p>
+                                <a-input v-model:value="item.address" size="small" style="margin-bottom: 8px; background: rgba(255,255,255,0.8);" />
 
-                        <p><strong>描述:</strong></p>
-                        <a-textarea v-model:value="item.description" :rows="2" size="small" style="margin-bottom: 8px" />
+                                <p><strong>游览时长(分钟):</strong></p>
+                                <a-input-number v-model:value="item.visit_duration" :min="10" :max="480" size="small" style="width: 100%; margin-bottom: 8px; background: rgba(255,255,255,0.8);" />
+
+                                <p><strong>描述:</strong></p>
+                                <a-textarea v-model:value="item.description" :rows="2" size="small" style="margin-bottom: 8px; background: rgba(255,255,255,0.8);" />
+                              </div>
+
+                              <!-- 查看模式 -->
+                              <div v-else>
+                                <p><strong>地址:</strong> {{ item.address }}</p>
+                                <p><strong>游览时长:</strong> {{ item.visit_duration }}分钟</p>
+                                <p class="description-text"><strong>描述:</strong> {{ item.description }}</p>
+                                <p v-if="item.rating"><strong>评分:</strong> {{ item.rating }}⭐</p>
+                              </div>
+                            </div>
+                          </div>
+                        </LiquidGlass>
                       </div>
-
-                      <!-- 查看模式 -->
-                      <div v-else>
-                        <p><strong>地址:</strong> {{ item.address }}</p>
-                        <p><strong>游览时长:</strong> {{ item.visit_duration }}分钟</p>
-                        <p><strong>描述:</strong> {{ item.description }}</p>
-                        <p v-if="item.rating"><strong>评分:</strong> {{ item.rating }}⭐</p>
-                      </div>
-                    </a-card>
+                    </div>
                   </a-list-item>
                 </template>
               </a-list>
@@ -446,10 +466,24 @@ const loadAttractionPhotos = async () => {
 }
 
 // 获取景点图片
+const localImageModules = import.meta.glob('@/assets/images/attractions/*.{png,jpg,jpeg,webp,svg}', { eager: true, query: '?url', import: 'default' })
+const localImages = Object.values(localImageModules) as string[]
+
 const getAttractionImage = (name: string, index: number): string => {
   // 如果已加载真实图片,返回真实图片
   if (attractionPhotos.value[name]) {
     return attractionPhotos.value[name]
+  }
+
+  // 接口请求失败时，从本地随机图库目录中选择一张图片作为后备
+  if (localImages.length > 0) {
+    // 使用景点名称的哈希值或索引来选择图片，确保同一个景点总是显示相同的随机图片
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const imageIndex = Math.abs(hash) % localImages.length;
+    return localImages[imageIndex];
   }
 
   // 返回一个纯色占位图(避免跨域问题)
@@ -992,30 +1026,50 @@ const drawRoutes = (AMap: any, attractions: any[]) => {
   gap: 24px;
 }
 
-/* 景点图片样式 */
-.attraction-image-wrapper {
+/* 景点卡片重构样式 */
+.attraction-card-container {
   position: relative;
-  margin-bottom: 16px;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-xl);
   overflow: hidden;
+  min-height: 400px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
   box-shadow: var(--shadow-sm);
+  transition: all var(--transition-base);
 }
 
-.attraction-image {
+.attraction-card-container:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.attraction-bg-image {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
-  height: 220px;
+  height: 100%;
   object-fit: cover;
+  z-index: 0;
   transition: transform var(--transition-slow);
 }
 
-.attraction-image-wrapper:hover .attraction-image {
+.attraction-card-container:hover .attraction-bg-image {
   transform: scale(1.05);
 }
 
-.attraction-badge {
+.attraction-top-badges {
   position: absolute;
-  top: 12px;
-  left: 12px;
+  top: 0;
+  left: 0;
+  width: 100%;
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  z-index: 1;
+}
+
+.attraction-badge {
   background: var(--primary-color);
   color: white;
   width: 36px;
@@ -1033,9 +1087,6 @@ const drawRoutes = (AMap: any, attractions: any[]) => {
 }
 
 .price-tag {
-  position: absolute;
-  top: 12px;
-  right: 12px;
   background: rgba(15, 23, 42, 0.85);
   backdrop-filter: blur(4px);
   color: white;
@@ -1044,6 +1095,65 @@ const drawRoutes = (AMap: any, attractions: any[]) => {
   font-weight: 600;
   font-size: 13px;
   box-shadow: var(--shadow-sm);
+  height: fit-content;
+}
+
+.attraction-info-overlay {
+  position: relative;
+  z-index: 1;
+  padding: 24px;
+  margin-top: auto;
+}
+
+.attraction-content-glass {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  color: #ffffff;
+  text-align: left;
+  border-radius: 20px;
+  padding: 16px 20px;
+}
+
+.attraction-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  padding-bottom: 8px;
+}
+
+.attraction-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffffff;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  letter-spacing: -0.01em;
+}
+
+.attraction-body p {
+  margin-bottom: 6px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.95);
+  line-height: 1.4;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+
+.attraction-body strong {
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.description-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 /* 每日天气区块样式 */

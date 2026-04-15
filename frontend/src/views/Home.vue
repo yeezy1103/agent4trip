@@ -10,7 +10,7 @@
     <!-- 页面标题 -->
     <div class="page-header">
       <div class="icon-wrapper">
-        <span class="icon">✈️</span>
+        <span class="icon">🤗</span>
       </div>
       <h1 class="page-title">智能旅行助手</h1>
       <p class="page-subtitle">基于AI的个性化旅行规划,让每一次出行都完美无忧</p>
@@ -431,6 +431,18 @@ const handleSubmit = async () => {
 .custom-input,
 .custom-select {
   width: 100%;
+  height: 48px;
+}
+
+.custom-input :deep(.ant-input),
+.custom-input :deep(input) {
+  height: 100%;
+}
+
+.custom-select :deep(.ant-select-selector) {
+  height: 48px !important;
+  display: flex;
+  align-items: center;
 }
 
 /* 天数显示 - 紧凑版 */
