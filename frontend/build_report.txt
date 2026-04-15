@@ -1,0 +1,21 @@
+
+> helloagents-trip-planner-frontend@1.0.0 build
+> vue-tsc && vite build
+
+vite v6.3.6 building for production...
+transforming...
+✓ 3501 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                               0.48 kB │ gzip:   0.34 kB
+dist/assets/shader-worker-CJN-6C3l-0K_X0oj3.js                2.31 kB
+dist/assets/floral-5120x2880-4035-BG6I-GST.jpg            8,385.32 kB
+dist/assets/floral-5120x2880-4034-DCoSbf4p.jpg           10,774.36 kB
+dist/assets/floral-5120x2880-4041-BLWCT1Wq.jpg           11,012.96 kB
+dist/assets/flame-lily-5120x2880-4033-Rb1eDewm.jpg       12,384.23 kB
+dist/assets/aquilegia-flower-5120x2880-774-4elhDRV4.jpg  13,486.26 kB
+dist/assets/index-BuI5JbxN.css                              423.94 kB │ gzip:  45.74 kB
+dist/assets/purify.es-aGzT-_H7.js                            22.15 kB │ gzip:   8.63 kB
+dist/assets/index.es-BonU7rrx.js                            158.92 kB │ gzip:  53.07 kB
+dist/assets/index-xIGV0y8T.js                             2,252.06 kB │ gzip: 705.36 kB
+✓ built in 6.18s

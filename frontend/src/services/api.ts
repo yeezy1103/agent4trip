@@ -2,7 +2,7 @@ import axios from 'axios'
 import type { TripFormData, TripPlanResponse } from '@/types'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
-const API_TIMEOUT = Number(import.meta.env.VITE_API_TIMEOUT || 300000)
+const API_TIMEOUT = Number(import.meta.env.VITE_API_TIMEOUT || 600000)
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -46,7 +46,7 @@ export async function generateTripPlan(formData: TripFormData): Promise<TripPlan
   } catch (error: any) {
     console.error('生成旅行计划失败:', error)
     if (error.code === 'ECONNABORTED') {
-      throw new Error('请求超时：行程规划耗时较长，请稍后重试或延长前端超时时间')
+      throw new Error('请求超时：前端当前等待上限为 10 分钟，请稍后重试')
     }
     throw new Error(error.response?.data?.detail || error.message || '生成旅行计划失败')
   }

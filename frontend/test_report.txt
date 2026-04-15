@@ -1,0 +1,10 @@
+
+ RUN  v3.2.4 /Users/yeezy/Desktop/helloagents-trip-planner2/frontend
+
+ ✓ src/components/argon/__tests__/ArgonButton.spec.ts (4 tests) 85ms
+
+ Test Files  1 passed (1)
+      Tests  4 passed (4)
+   Start at  11:22:25
+   Duration  1.04s (transform 191ms, setup 0ms, collect 302ms, tests 85ms, environment 412ms, prepare 40ms)
+
