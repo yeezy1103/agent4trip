@@ -5,7 +5,7 @@
         <div class="page-kicker">Curated Trip Story</div>
         <h1 class="page-heading">{{ tripPlan?.city || '旅行计划' }} 的沉浸式行程总览</h1>
         <p class="page-description">
-          从概览、预算、地图到每日安排，所有内容保持一致，但以更强的节奏、玻璃层次和展示感重新组织。
+          从概览、预算、地图到每日安排，这里是您的专属行程计划。
         </p>
       </div>
 
@@ -86,7 +86,15 @@
               <div class="overview-eyebrow">Overview</div>
               <h2 class="overview-city">{{ tripPlan.city }} 旅行计划</h2>
               <p class="overview-dates">{{ tripPlan.start_date }} 至 {{ tripPlan.end_date }}</p>
-              <p class="overview-suggestion">{{ tripPlan.overall_suggestions }}</p>
+              <div class="overview-suggestion-list">
+                <p
+                  v-for="(line, index) in formattedOverallSuggestions"
+                  :key="`overall-${index}`"
+                  class="overview-suggestion"
+                >
+                  {{ line }}
+                </p>
+              </div>
             </div>
 
             <div class="overview-metrics">
@@ -177,28 +185,40 @@
               </template>
 
               <!-- 每日天气整合区块 -->
-              <div class="day-weather-banner" v-if="getWeatherForDay(day.date)">
-                <div class="weather-item">
-                  <span class="weather-icon"><BulbOutlined /></span>
-                  <div class="weather-details">
-                    <span class="weather-time">白天</span>
-                    <span class="weather-temp">{{ getWeatherForDay(day.date)?.day_weather }} {{ getWeatherForDay(day.date)?.day_temp }}°C</span>
+              <div class="day-weather-container" v-if="getWeatherForDay(day.date)">
+                <div class="day-weather-banner">
+                  <div class="weather-item">
+                    <span class="weather-icon"><BulbOutlined /></span>
+                    <div class="weather-details">
+                      <span class="weather-time">白天</span>
+                      <span class="weather-temp">{{ getWeatherForDay(day.date)?.day_weather }} {{ getWeatherForDay(day.date)?.day_temp }}°C</span>
+                    </div>
+                  </div>
+                  <div class="weather-divider"></div>
+                  <div class="weather-item">
+                    <span class="weather-icon"><ClockCircleOutlined /></span>
+                    <div class="weather-details">
+                      <span class="weather-time">夜间</span>
+                      <span class="weather-temp">{{ getWeatherForDay(day.date)?.night_weather }} {{ getWeatherForDay(day.date)?.night_temp }}°C</span>
+                    </div>
+                  </div>
+                  <div class="weather-divider"></div>
+                  <div class="weather-item wind-info">
+                    <span class="weather-icon"><DashboardOutlined /></span>
+                    <div class="weather-details">
+                      <span class="weather-time">风向风力</span>
+                      <span class="weather-temp">{{ getWeatherForDay(day.date)?.wind_direction }} {{ getWeatherForDay(day.date)?.wind_power }}</span>
+                    </div>
                   </div>
                 </div>
-                <div class="weather-divider"></div>
-                <div class="weather-item">
-                  <span class="weather-icon"><ClockCircleOutlined /></span>
-                  <div class="weather-details">
-                    <span class="weather-time">夜间</span>
-                    <span class="weather-temp">{{ getWeatherForDay(day.date)?.night_weather }} {{ getWeatherForDay(day.date)?.night_temp }}°C</span>
-                  </div>
-                </div>
-                <div class="weather-divider"></div>
-                <div class="weather-item wind-info">
-                  <span class="weather-icon"><DashboardOutlined /></span>
-                  <div class="weather-details">
-                    <span class="weather-time">风向风力</span>
-                    <span class="weather-temp">{{ getWeatherForDay(day.date)?.wind_direction }} {{ getWeatherForDay(day.date)?.wind_power }}</span>
+                <div v-if="getWeatherForDay(day.date)?.planning_advice" class="weather-advice-box" :class="`risk-${getWeatherForDay(day.date)?.risk_level || 'low'}`">
+                  <div class="advice-content">
+                    <span class="advice-icon">
+                      <InfoCircleOutlined v-if="getWeatherForDay(day.date)?.risk_level === 'low'" />
+                      <WarningOutlined v-else-if="getWeatherForDay(day.date)?.risk_level === 'medium'" />
+                      <AlertOutlined v-else />
+                    </span>
+                    <span class="advice-text"><strong>天气建议：</strong>{{ getWeatherForDay(day.date)?.planning_advice }}</span>
                   </div>
                 </div>
               </div>
@@ -378,7 +398,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, nextTick } from 'vue'
+import { computed, ref, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import {
@@ -402,7 +422,10 @@ import {
   ProfileOutlined,
   SaveOutlined,
   BulbOutlined,
-  WalletOutlined
+  WalletOutlined,
+  InfoCircleOutlined,
+  WarningOutlined,
+  AlertOutlined
 } from '@ant-design/icons-vue'
 import AMapLoader from '@amap/amap-jsapi-loader'
 import html2canvas from 'html2canvas'
@@ -417,6 +440,36 @@ const attractionPhotos = ref<Record<string, string>>({})
 const activeSection = ref('overview')
 const activeDays = ref<number[]>([0]) // 默认展开第一天
 let map: any = null
+
+const formattedOverallSuggestions = computed(() => {
+  const rawText = tripPlan.value?.overall_suggestions ?? ''
+  if (!rawText.trim()) return []
+
+  const sanitized = rawText
+    .replace(/\*\*/g, '')
+    .replace(/\r/g, '')
+    .replace(/\\n/g, '\n')
+    .trim()
+
+  const normalized = sanitized
+    .replace(/\n{2,}/g, '\n')
+    .replace(/(^|\n)\s*([•\-])\s+/g, '$1$2 ')
+    .replace(/(^|\n)\s*(\d+\.\s+)/g, '$1$2')
+
+  const lines = normalized
+    .split('\n')
+    .map(line => line.trim())
+    .filter(Boolean)
+
+  if (lines.length > 1) {
+    return lines
+  }
+
+  return sanitized
+    .split(/(?<=[。；！？])(?!(\d{2,4}-\d{1,2}-\d{1,2}))/)
+    .map(line => line.trim())
+    .filter(Boolean)
+})
 
 onMounted(async () => {
   const data = sessionStorage.getItem('tripPlan')
@@ -522,6 +575,14 @@ const getMealLabel = (type: string): string => {
     snack: '小吃'
   }
   return labels[type] || type
+}
+
+const hasValidLocation = (location?: { longitude: number; latitude: number } | null) => {
+  return Boolean(
+    location &&
+    Number.isFinite(location.longitude) &&
+    Number.isFinite(location.latitude)
+  )
 }
 
 // 加载所有景点图片
@@ -945,11 +1006,13 @@ const addAttractionMarkers = (AMap: any) => {
 
   const markers: any[] = []
   const allAttractions: any[] = []
+  const allHotels: any[] = []
+  const markerKeys = new Set<string>()
 
   // 收集所有景点
   tripPlan.value.days.forEach((day, dayIndex) => {
     day.attractions.forEach((attraction, attrIndex) => {
-      if (attraction.location && attraction.location.longitude && attraction.location.latitude) {
+      if (hasValidLocation(attraction.location)) {
         allAttractions.push({
           ...attraction,
           dayIndex,
@@ -957,6 +1020,17 @@ const addAttractionMarkers = (AMap: any) => {
         })
       }
     })
+
+    if (day.hotel && hasValidLocation(day.hotel.location)) {
+      const hotelKey = `${day.hotel.name}-${day.hotel.location!.longitude}-${day.hotel.location!.latitude}`
+      if (!markerKeys.has(hotelKey)) {
+        markerKeys.add(hotelKey)
+        allHotels.push({
+          ...day.hotel,
+          dayIndex
+        })
+      }
+    }
   })
 
   // 创建标记
@@ -992,11 +1066,41 @@ const addAttractionMarkers = (AMap: any) => {
     markers.push(marker)
   })
 
+  allHotels.forEach((hotel) => {
+    const marker = new AMap.Marker({
+      position: [hotel.location.longitude, hotel.location.latitude],
+      title: hotel.name,
+      label: {
+        content: '<div style="background: #fa8c16; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">酒店</div>',
+        offset: new AMap.Pixel(0, -30)
+      }
+    })
+
+    const infoWindow = new AMap.InfoWindow({
+      content: `
+        <div style="padding: 10px;">
+          <h4 style="margin: 0 0 8px 0;">${hotel.name}</h4>
+          <p style="margin: 4px 0;"><strong>地址:</strong> ${hotel.address || '暂无地址'}</p>
+          <p style="margin: 4px 0;"><strong>类型:</strong> ${hotel.type || '酒店'}</p>
+          <p style="margin: 4px 0;"><strong>价格:</strong> ${hotel.price_range || '待确认'}</p>
+          <p style="margin: 4px 0; color: #fa8c16;"><strong>第${hotel.dayIndex + 1}天推荐酒店</strong></p>
+        </div>
+      `,
+      offset: new AMap.Pixel(0, -30)
+    })
+
+    marker.on('click', () => {
+      infoWindow.open(map, marker.getPosition())
+    })
+
+    markers.push(marker)
+  })
+
   // 添加标记到地图
   map.add(markers)
 
   // 自动调整视野以包含所有标记
-  if (allAttractions.length > 0) {
+  if (markers.length > 0) {
     map.setFitView(markers)
   }
 
@@ -1333,15 +1437,61 @@ const drawRoutes = (AMap: any, attractions: any[]) => {
 }
 
 /* 每日天气区块样式 */
+.day-weather-container {
+  margin-bottom: 24px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+}
+
 .day-weather-banner {
   display: flex;
   align-items: center;
   justify-content: space-around;
   background: linear-gradient(to right, rgba(79, 70, 229, 0.05), rgba(79, 70, 229, 0.02));
-  border-radius: var(--radius-lg);
   padding: 16px 24px;
-  margin-bottom: 24px;
-  border: 1px solid var(--border-color);
+}
+
+.weather-advice-box {
+  padding: 14px 24px;
+  font-size: 14px;
+  line-height: 1.6;
+  border-top: 1px dashed rgba(0, 0, 0, 0.08);
+}
+
+.weather-advice-box.risk-low {
+  background: rgba(82, 196, 26, 0.05);
+  color: #2e7d32;
+}
+
+.weather-advice-box.risk-medium {
+  background: rgba(250, 140, 22, 0.08);
+  color: #d46b08;
+}
+
+.weather-advice-box.risk-high {
+  background: rgba(245, 34, 45, 0.05);
+  color: #c62828;
+}
+
+.advice-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.advice-icon {
+  font-size: 16px;
+  margin-top: 2px;
+}
+
+.advice-text {
+  flex: 1;
+}
+
+.advice-text strong {
+  font-weight: 600;
+  margin-right: 4px;
 }
 
 .weather-item {
@@ -1469,11 +1619,19 @@ const drawRoutes = (AMap: any, attractions: any[]) => {
   font-weight: 600;
 }
 
+.overview-suggestion-list {
+  margin-top: 18px;
+}
+
 .overview-suggestion {
-  margin: 18px 0 0;
+  margin: 0 0 10px;
   font-size: 16px;
   line-height: 1.78;
   color: var(--text-secondary);
+}
+
+.overview-suggestion:last-child {
+  margin-bottom: 0;
 }
 
 .overview-metrics {

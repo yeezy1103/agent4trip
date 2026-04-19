@@ -64,6 +64,9 @@ export interface WeatherInfo {
   night_temp: number
   wind_direction: string
   wind_power: string
+  risk_level?: 'high' | 'medium' | 'low'
+  risk_score?: number
+  planning_advice?: string
 }
 
 export interface TripPlan {

@@ -14,7 +14,7 @@
         </div>
         <div class="icon-wrapper">
           <span class="icon">
-            <RobotOutlined />
+            <SmileOutlined />
           </span>
         </div>
         <h1 class="page-title">智行伴侣</h1>
@@ -98,6 +98,7 @@
                 </template>
                 <a-date-picker
                   v-model:value="formData.start_date"
+                  :disabled-date="disabledStartDate"
                   style="width: 100%"
                   size="large"
                   class="custom-input"
@@ -112,6 +113,7 @@
                 </template>
                 <a-date-picker
                   v-model:value="formData.end_date"
+                  :disabled-date="disabledEndDate"
                   style="width: 100%"
                   size="large"
                   class="custom-input"
@@ -218,6 +220,7 @@
             type="primary"
             html-type="submit"
             :loading="loading"
+            @click="handleStartClick"
             size="large"
             class="submit-button"
           >
@@ -242,6 +245,9 @@
             :stroke-width="10"
           />
           <p class="loading-status">{{ loadingStatus }}</p>
+          <a-button danger ghost class="stop-button" @click="stopGeneration">
+            停止生成
+          </a-button>
         </div>
       </a-form>
     </a-card>
@@ -266,10 +272,10 @@ import {
   HomeOutlined,
   MessageOutlined,
   PictureOutlined,
-  RobotOutlined,
   SendOutlined,
   SettingOutlined,
   ShopOutlined,
+  SmileOutlined,
   StarOutlined,
   WalletOutlined
 } from '@ant-design/icons-vue'
@@ -280,6 +286,10 @@ const router = useRouter()
 const loading = ref(false)
 const loadingProgress = ref(0)
 const loadingStatus = ref('')
+const dateValidationError = ref('')
+const isGenerationCanceled = ref(false)
+let progressInterval: ReturnType<typeof setInterval> | null = null
+let requestController: AbortController | null = null
 
 type TripFormState = Omit<TripFormData, 'start_date' | 'end_date'> & {
   start_date: Dayjs | null
@@ -302,29 +312,127 @@ watch([() => formData.start_date, () => formData.end_date], ([start, end]) => {
   if (start && end) {
     const days = end.diff(start, 'day') + 1
     if (days > 0 && days <= 30) {
+      dateValidationError.value = ''
       formData.travel_days = days
     } else if (days > 30) {
+      dateValidationError.value = '旅行天数不能超过30天'
       message.warning('旅行天数不能超过30天')
       formData.end_date = null
     } else {
+      dateValidationError.value = '结束日期不能早于开始日期'
       message.warning('结束日期不能早于开始日期')
       formData.end_date = null
     }
+  } else if (!start && !end) {
+    dateValidationError.value = ''
   }
 })
 
-const handleSubmit = async () => {
-  if (!formData.start_date || !formData.end_date) {
-    message.error('请选择日期')
+const clearProgressInterval = () => {
+  if (progressInterval) {
+    clearInterval(progressInterval)
+    progressInterval = null
+  }
+}
+
+const resetLoadingState = () => {
+  clearProgressInterval()
+  requestController = null
+  loading.value = false
+  loadingProgress.value = 0
+  loadingStatus.value = ''
+  isGenerationCanceled.value = false
+}
+
+const disabledStartDate = (current: Dayjs) => {
+  if (!formData.end_date) return false
+  return current.isAfter(formData.end_date, 'day')
+}
+
+const disabledEndDate = (current: Dayjs) => {
+  if (!formData.start_date) return false
+  return current.isBefore(formData.start_date, 'day')
+}
+
+const handleStartClick = (event: MouseEvent) => {
+  const city = formData.city.trim()
+
+  if (!city) {
+    event.preventDefault()
+    message.warning('请输入目的地城市')
     return
   }
 
+  if (dateValidationError.value === '结束日期不能早于开始日期') {
+    event.preventDefault()
+    message.warning(dateValidationError.value)
+    return
+  }
+
+  if (!formData.start_date && !formData.end_date) {
+    event.preventDefault()
+    message.warning('请选择开始日期和结束日期')
+    return
+  }
+
+  if (!formData.start_date) {
+    event.preventDefault()
+    message.warning('请选择开始日期')
+    return
+  }
+
+  if (!formData.end_date) {
+    event.preventDefault()
+    message.warning('请选择结束日期')
+  }
+}
+
+const stopGeneration = () => {
+  isGenerationCanceled.value = true
+  clearProgressInterval()
+  requestController?.abort()
+  message.info('已停止生成当前行程')
+  resetLoadingState()
+}
+
+const handleSubmit = async () => {
+  if (!formData.city.trim()) {
+    message.warning('请输入目的地城市')
+    return
+  }
+
+  if (dateValidationError.value === '结束日期不能早于开始日期') {
+    message.warning(dateValidationError.value)
+    return
+  }
+
+  if (!formData.start_date && !formData.end_date) {
+    message.warning('请选择开始日期和结束日期')
+    return
+  }
+
+  if (!formData.start_date) {
+    message.warning('请选择开始日期')
+    return
+  }
+
+  if (!formData.end_date) {
+    message.warning('请选择结束日期')
+    return
+  }
+
+  if (!formData.start_date || !formData.end_date) {
+    return
+  }
+
+  requestController = new AbortController()
   loading.value = true
   loadingProgress.value = 0
   loadingStatus.value = '正在初始化...'
+  isGenerationCanceled.value = false
 
   // 模拟进度更新
-  const progressInterval = setInterval(() => {
+  progressInterval = setInterval(() => {
     if (loadingProgress.value < 90) {
       loadingProgress.value += 10
 
@@ -343,7 +451,7 @@ const handleSubmit = async () => {
 
   try {
     const requestData: TripFormData = {
-      city: formData.city,
+      city: formData.city.trim(),
       start_date: formData.start_date.format('YYYY-MM-DD'),
       end_date: formData.end_date.format('YYYY-MM-DD'),
       travel_days: formData.travel_days,
@@ -353,9 +461,9 @@ const handleSubmit = async () => {
       free_text_input: formData.free_text_input
     }
 
-    const response = await generateTripPlan(requestData)
+    const response = await generateTripPlan(requestData, requestController.signal)
 
-    clearInterval(progressInterval)
+    clearProgressInterval()
     loadingProgress.value = 100
     loadingStatus.value = '已完成'
 
@@ -373,14 +481,16 @@ const handleSubmit = async () => {
       message.error(response.message || '生成失败')
     }
   } catch (error: any) {
-    clearInterval(progressInterval)
+    clearProgressInterval()
+    if (error.message === '已停止生成' || isGenerationCanceled.value) {
+      return
+    }
     message.error(error.message || '生成旅行计划失败,请稍后重试')
   } finally {
+    const delay = isGenerationCanceled.value ? 0 : 1000
     setTimeout(() => {
-      loading.value = false
-      loadingProgress.value = 0
-      loadingStatus.value = ''
-    }, 1000)
+      resetLoadingState()
+    }, delay)
   }
 }
 </script>
@@ -862,6 +972,13 @@ const handleSubmit = async () => {
   color: var(--primary-color);
   font-weight: 600;
   animation: pulse 1.5s ease-in-out infinite;
+}
+
+.stop-button {
+  margin-top: 16px;
+  min-width: 140px;
+  height: 40px;
+  border-radius: 9999px;
 }
 
 @keyframes fadeInDown {

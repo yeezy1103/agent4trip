@@ -39,12 +39,18 @@ apiClient.interceptors.response.use(
 /**
  * 生成旅行计划
  */
-export async function generateTripPlan(formData: TripFormData): Promise<TripPlanResponse> {
+export async function generateTripPlan(
+  formData: TripFormData,
+  signal?: AbortSignal
+): Promise<TripPlanResponse> {
   try {
-    const response = await apiClient.post<TripPlanResponse>('/api/trip/plan', formData)
+    const response = await apiClient.post<TripPlanResponse>('/api/trip/plan', formData, { signal })
     return response.data
   } catch (error: any) {
     console.error('生成旅行计划失败:', error)
+    if (error.code === 'ERR_CANCELED') {
+      throw new Error('已停止生成')
+    }
     if (error.code === 'ECONNABORTED') {
       throw new Error('请求超时：前端当前等待上限为 10 分钟，请稍后重试')
     }
