@@ -115,6 +115,9 @@ class WeatherInfo(BaseModel):
     night_temp: Union[int, str] = Field(default=0, description="夜间温度")
     wind_direction: str = Field(default="", description="风向")
     wind_power: str = Field(default="", description="风力")
+    risk_level: str = Field(default="unknown", description="天气风险等级: low/medium/high/unknown")
+    risk_score: int = Field(default=0, description="天气风险分值")
+    planning_advice: str = Field(default="", description="天气规划建议")
 
     @field_validator('day_temp', 'night_temp', mode='before')
     @classmethod
@@ -148,6 +151,9 @@ class TripPlan(BaseModel):
     weather_info: List[WeatherInfo] = Field(default=[], description="天气信息")
     overall_suggestions: str = Field(..., description="总体建议")
     budget: Optional[Budget] = Field(default=None, description="预算信息")
+    validation_status: str = Field(default="validated", description="计划校验状态: validated/warning/fallback")
+    fallback_used: bool = Field(default=False, description="是否启用了整单回退")
+    warnings: List[str] = Field(default=[], description="结构校验与天气场景验证告警")
 
 
 class TripPlanResponse(BaseModel):
@@ -203,4 +209,3 @@ class ErrorResponse(BaseModel):
     success: bool = Field(default=False, description="是否成功")
     message: str = Field(..., description="错误消息")
     error_code: Optional[str] = Field(default=None, description="错误代码")
-

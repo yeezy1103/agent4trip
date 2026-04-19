@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "scientific-writing": {
+      "source": "K-Dense-AI/claude-scientific-skills",
+      "sourceType": "github",
+      "computedHash": "7ed103bf62e2d75cb91f63f8c475df0a8153781e1112d4add61140565d10924f"
+    }
+  }
+}

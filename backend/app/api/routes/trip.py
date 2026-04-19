@@ -45,9 +45,16 @@ async def plan_trip(request: TripRequest):
 
         print("✅ 旅行计划生成成功,准备返回响应\n")
 
+        if trip_plan.validation_status == "fallback":
+            message = "旅行计划生成成功,已启用安全回退方案"
+        elif trip_plan.validation_status == "warning":
+            message = "旅行计划生成成功,已完成结构校验并记录天气场景告警"
+        else:
+            message = "旅行计划生成成功"
+
         return TripPlanResponse(
             success=True,
-            message="旅行计划生成成功",
+            message=message,
             data=trip_plan
         )
 
@@ -83,4 +90,3 @@ async def health_check():
             status_code=503,
             detail=f"服务不可用: {str(e)}"
         )
-
