@@ -1,0 +1,448 @@
+```json
+{
+  "city": "云南昆明",
+  "start_date": "2026-04-19",
+  "end_date": "2026-04-25",
+  "days": [
+    {
+      "date": "2026-04-19",
+      "day_index": 0,
+      "description": "第1天行程概述：抵达昆明，入住恒兴酒店。由于天气为阵雨（中风险），优先安排室内景点。上午游览自然奇趣秘境，下午游览朵亩森林自然探索中心。晚上在酒店附近享用菌菇火锅。",
+      "transportation": "自驾",
+      "accommodation": "舒适型酒店",
+      "hotel": {
+        "name": "恒兴酒店(昆明医科大学第一附属医院陆军讲武堂旧址店)",
+        "address": "西昌路848号恒兴写字楼",
+        "location": {
+          "longitude": 102.704,
+          "latitude": 25.038
+        },
+        "price_range": "300-450元",
+        "rating": "4.2",
+        "distance": "距离自然奇趣秘境约5公里",
+        "type": "舒适型酒店",
+        "estimated_cost": 380
+      },
+      "attractions": [
+        {
+          "name": "自然奇趣秘境",
+          "address": "白龙路439号世界园艺博览园(西南角)",
+          "location": {
+            "longitude": 102.751,
+            "latitude": 25.070
+          },
+          "visit_duration": 150,
+          "description": "位于世博园内的室内展览空间，融合自然景观与科技展示，适合拍照打卡，完全不受雨天影响。",
+          "category": "室内展览/自然主题",
+          "ticket_price": 80
+        },
+        {
+          "name": "朵亩森林自然探索中心",
+          "address": "团结街道",
+          "location": {
+            "longitude": 102.620,
+            "latitude": 25.150
+          },
+          "visit_duration": 120,
+          "description": "以自然教育为主题的室内场馆，可以了解森林生态和动植物知识，是雨天探索自然奥秘的理想选择。",
+          "category": "室内教育/自然主题",
+          "ticket_price": 60
+        }
+      ],
+      "meals": [
+        {
+          "type": "breakfast",
+          "name": "酒店早餐",
+          "description": "酒店内含早餐，提供米线、粥品等，清淡可口。",
+          "estimated_cost": 0
+        },
+        {
+          "type": "lunch",
+          "name": "菌子王过桥米线",
+          "description": "昆明特色过桥米线，汤底鲜美，配料丰富，可选择不辣的清汤底。",
+          "estimated_cost": 35
+        },
+        {
+          "type": "dinner",
+          "name": "野生菌菇火锅",
+          "description": "品尝云南特色的野生菌菇火锅，汤底醇厚，菌菇鲜美，记得要求不辣的锅底。",
+          "estimated_cost": 80
+        }
+      ]
+    },
+    {
+      "date": "2026-04-20",
+      "day_index": 1,
+      "description": "第2天行程概述：天气转好多云（低风险）。上午游览自然园，下午前往滇池海埂公园看“海”（高原湖泊）和红嘴鸥。晚上入住城市便捷酒店。",
+      "transportation": "自驾",
+      "accommodation": "舒适型酒店",
+      "hotel": {
+        "name": "城市便捷酒店(昆明大商汇海乐世界店)",
+        "address": "广福路万科翡翠2期12栋39楼",
+        "location": {
+          "longitude": 102.735,
+          "latitude": 24.985
+        },
+        "price_range": "280-400元",
+        "rating": "4.3",
+        "distance": "距离滇池海埂公园约8公里",
+        "type": "舒适型连锁酒店",
+        "estimated_cost": 340
+      },
+      "attractions": [
+        {
+          "name": "自然园",
+          "address": "昆明晋龙如意园",
+          "location": {
+            "longitude": 102.650,
+            "latitude": 24.880
+          },
+          "visit_duration": 120,
+          "description": "包含温室和展览馆的半室内园林，可以欣赏各种植物和园林景观，是拍照的好地方。",
+          "category": "园林/植物园",
+          "ticket_price": 40
+        },
+        {
+          "name": "滇池海埂公园",
+          "address": "西山区滇池路1318号",
+          "location": {
+            "longitude": 102.660,
+            "latitude": 24.950
+          },
+          "visit_duration": 180,
+          "description": "高原湖泊滇池边的公园，视野开阔，宛如看海。4月可能仍有红嘴鸥，是拍摄湖光山色和鸟类的绝佳地点。",
+          "category": "公园/湖泊",
+          "ticket_price": 0
+        }
+      ],
+      "meals": [
+        {
+          "type": "breakfast",
+          "name": "酒店早餐",
+          "description": "酒店内含早餐。",
+          "estimated_cost": 0
+        },
+        {
+          "type": "lunch",
+          "name": "公园附近小吃",
+          "description": "可在公园附近品尝豌豆粉、烤饵块等小吃。",
+          "estimated_cost": 25
+        },
+        {
+          "type": "dinner",
+          "name": "广福路商圈餐厅",
+          "description": "在酒店附近的商圈选择一家本地菜馆，品尝汽锅鸡、老奶洋芋等不辣特色菜。",
+          "estimated_cost": 60
+        }
+      ]
+    },
+    {
+      "date": "2026-04-21",
+      "day_index": 2,
+      "description": "第3天行程概述：天气晴好（低风险）。全天沉浸式游览昆明动物园，看各种动物，并在园内寻找仙人掌果摊位。晚上入住锦都大酒店。",
+      "transportation": "自驾",
+      "accommodation": "舒适型酒店",
+      "hotel": {
+        "name": "锦都大酒店",
+        "address": "东二环路519号（大树营地铁站B口步行360米）",
+        "location": {
+          "longitude": 102.735,
+          "latitude": 25.038
+        },
+        "price_range": "320-460元",
+        "rating": "4.1",
+        "distance": "距离昆明动物园约4公里",
+        "type": "舒适型酒店",
+        "estimated_cost": 390
+      },
+      "attractions": [
+        {
+          "name": "昆明动物园",
+          "address": "五华区青年路92号",
+          "location": {
+            "longitude": 102.712,
+            "latitude": 25.048
+          },
+          "visit_duration": 240,
+          "description": "位于圆通山内，集动物观赏、花卉（春季樱花海棠盛开）和历史文化于一体的综合性公园。可以看大象、孔雀等多种动物，并在园内小吃摊寻找仙人掌果。是拍照和休闲的好去处。",
+          "category": "动物园/公园",
+          "ticket_price": 20
+        }
+      ],
+      "meals": [
+        {
+          "type": "breakfast",
+          "name": "酒店早餐",
+          "description": "酒店内含早餐。",
+          "estimated_cost": 0
+        },
+        {
+          "type": "lunch",
+          "name": "动物园内简餐或小吃",
+          "description": "在园内解决，可以尝试寻找并购买仙人掌果。",
+          "estimated_cost": 30
+        },
+        {
+          "type": "dinner",
+          "name": "南屏街网红餐厅打卡",
+          "description": "前往市中心南屏街商圈，选择一家评价高的网红云南菜馆，品尝不辣版的特色菜肴。",
+          "estimated_cost": 70
+        }
+      ]
+    },
+    {
+      "date": "2026-04-22",
+      "day_index": 3,
+      "description": "第4天行程概述：天气晴好（低风险）。上午游览翠湖公园看花看鸟，下午前往云南大学（会泽院等历史建筑）拍照打卡。晚上继续入住锦都大酒店。",
+      "transportation": "自驾",
+      "accommodation": "舒适型酒店",
+      "hotel": {
+        "name": "锦都大酒店",
+        "address": "东二环路519号（大树营地铁站B口步行360米）",
+        "location": {
+          "longitude": 102.735,
+          "latitude": 25.038
+        },
+        "price_range": "320-460元",
+        "rating": "4.1",
+        "distance": "距离翠湖公园约3公里",
+        "type": "舒适型酒店",
+        "estimated_cost": 390
+      },
+      "attractions": [
+        {
+          "name": "翠湖公园",
+          "address": "五华区翠湖南路67号",
+          "location": {
+            "longitude": 102.704,
+            "latitude": 25.048
+          },
+          "visit_duration": 150,
+          "description": "昆明市区内的经典公园，四月春意盎然，湖光柳色，花卉盛开，是拍摄城市自然风光和休闲漫步的绝佳地点。",
+          "category": "城市公园/湖泊",
+          "ticket_price": 0
+        },
+        {
+          "name": "云南大学（会泽院）",
+          "address": "五华区翠湖北路2号",
+          "location": {
+            "longitude": 102.702,
+            "latitude": 25.058
+          },
+          "visit_duration": 120,
+          "description": "中国最美大学之一，校园内古树参天，历史建筑（如会泽院）极具特色，是文艺拍照和感受学术氛围的网红打卡地。",
+          "category": "校园/历史建筑",
+          "ticket_price": 0
+        }
+      ],
+      "meals": [
+        {
+          "type": "breakfast",
+          "name": "酒店早餐",
+          "description": "酒店内含早餐。",
+          "estimated_cost": 0
+        },
+        {
+          "type": "lunch",
+          "name": "文化巷小吃",
+          "description": "在云大附近的文化巷，有很多特色小吃和咖啡馆，可以尝试豆花米线（免辣）。",
+          "estimated_cost": 30
+        },
+        {
+          "type": "dinner",
+          "name": "菌菇火锅（再次体验）",
+          "description": "尝试另一家口碑好的菌菇火锅店，比较不同风味。",
+          "estimated_cost": 85
+        }
+      ]
+    },
+    {
+      "date": "2026-04-23",
+      "day_index": 4,
+      "description": "第5天行程概述：天气晴好（低风险）。上午游览大观公园，登大观楼俯瞰滇池。下午前往斗南花卉市场，沉浸式体验亚洲最大花市。晚上入住昆明怡雅阳光酒店公寓。",
+      "transportation": "自驾",
+      "accommodation": "舒适型酒店",
+      "hotel": {
+        "name": "昆明怡雅阳光酒店公寓(关上精品店)",
+        "address": "关上金汁路388号",
+        "location": {
+          "longitude": 102.750,
+          "latitude": 24.980
+        },
+        "price_range": "350-500元",
+        "rating": "4.0",
+        "distance": "距离斗南花卉市场约10公里",
+        "type": "舒适型酒店式公寓",
+        "estimated_cost": 420
+      },
+      "attractions": [
+        {
+          "name": "大观公园",
+          "address": "西山区大观路284号",
+          "location": {
+            "longitude": 102.675,
+            "latitude": 24.970
+          },
+          "visit_duration": 150,
+          "description": "以清代建筑大观楼闻名，楼上有著名的“天下第一长联”。登楼可远眺滇池和西山睡美人，公园内花卉繁多，景色宜人。",
+          "category": "历史公园/观景",
+          "ticket_price": 20
+        },
+        {
+          "name": "斗南花卉市场",
+          "address": "呈贡区鲜花大道花花世界",
+          "location": {
+            "longitude": 102.800,
+            "latitude": 24.900
+          },
+          "visit_duration": 180,
+          "description": "亚洲最大的鲜切花交易市场，花的海洋，可以以极低的价格购买各种鲜花，是爱花人士和摄影爱好者的天堂。",
+          "category": "市场/花卉",
+          "ticket_price": 0
+        }
+      ],
+      "meals": [
+        {
+          "type": "breakfast",
+          "name": "酒店早餐",
+          "description": "酒店内含早餐。",
+          "estimated_cost": 0
+        },
+        {
+          "type": "lunch",
+          "name": "公园附近农家菜",
+          "description": "在大观公园附近品尝农家菜，推荐清蒸鱼、炒时蔬。",
+          "estimated_cost": 50
+        },
+        {
+          "type": "dinner",
+          "name": "关上片区特色餐厅",
+          "description": "在入住酒店附近寻找本地餐厅，品尝宜良烤鸭（不辣）等特色。",
+          "estimated_cost": 65
+        }
+      ]
+    },
+    {
+      "date": "2026-04-24",
+      "day_index": 5,
+      "description": "第6天行程概述：天气晴好（低风险）。上午游览西山森林公园，乘坐缆车俯瞰滇池全景。下午前往云南民族村，体验多元民族文化。晚上入住云南锦华国际酒店。",
+      "transportation": "自驾",
+      "accommodation": "舒适型酒店",
+      "hotel": {
+        "name": "云南锦华国际酒店",
+        "address": "北京路96号",
+        "location": {
+          "longitude": 102.722,
+          "latitude": 25.038
+        },
+        "price_range": "380-550元",
+        "rating": "4.2",
+        "distance": "距离云南民族村约12公里",
+        "type": "舒适型酒店",
+        "estimated_cost": 460
+      },
+      "attractions": [
+        {
+          "name": "西山森林公园",
+          "address": "西山区西山公路",
+          "location": {
+            "longitude": 102.630,
+            "latitude": 24.970
+          },
+          "visit_duration": 180,
+          "description": "昆明“睡美人”山，可乘坐环保车和缆车上山，沿途森林茂密，登顶龙门可俯瞰整个滇池和昆明城区，视野极佳，是拍摄全景的绝佳位置。",
+          "category": "森林公园/山岳",
+          "ticket_price": 30
+        },
+        {
+          "name": "云南民族村",
+          "address": "西山区滇池路1310号",
+          "location": {
+            "longitude": 102.660,
+            "latitude": 24.960
+          },
+          "visit_duration": 180,
+          "description": "集中展示云南25个少数民族文化风情的主题公园，有特色村寨、歌舞表演和手工艺品，非常适合拍照和了解多元文化。",
+          "category": "文化主题公园",
+          "ticket_price": 90
+        }
+      ],
+      "meals": [
+        {
+          "type": "breakfast",
+          "name": "酒店早餐",
+          "description": "酒店内含早餐。",
+          "estimated_cost": 0
+        },
+        {
+          "type": "lunch",
+          "name": "西山脚下农家乐",
+          "description": "品尝山野风味，推荐野菜和土鸡。",
+          "estimated_cost": 55
+        },
+        {
+          "type": "dinner",
+          "name": "北京路商圈美食",
+          "description": "在酒店所在的北京路商圈，选择一家高评分餐厅，享用告别晚餐。",
+          "estimated_cost": 90
+        }
+      ]
+    },
+    {
+      "date": "2026-04-25",
+      "day_index": 6,
+      "description": "第7天行程概述：最后一天，天气晴好（低风险）。上午自由活动，可前往金马碧鸡坊拍照打卡，购买伴手礼（如鲜花饼、菌菇干货）。下午根据航班或列车时间，自驾前往机场/火车站，结束旅程。",
+      "transportation": "自驾",
+      "accommodation": "无（返程）",
+      "hotel": {
+        "name": "",
+        "address": "",
+        "location": {
+          "longitude": 0,
+          "latitude": 0
+        },
+        "price_range": "",
+        "rating": "",
+        "distance": "",
+        "type": "",
+        "estimated_cost": 0
+      },
+      "attractions": [
+        {
+          "name": "金马碧鸡坊",
+          "address": "西山区金马巷10号",
+          "location": {
+            "longitude": 102.715,
+            "latitude": 25.038
+          },
+          "visit_duration": 60,
+          "description": "昆明的地标性建筑，历史悠久，是拍照留念和感受昆明老城风貌的必到之处。周边商业街可购买特产。",
+          "category": "历史地标/商业街",
+          "ticket_price": 0
+        }
+      ],
+      "meals": [
+        {
+          "type": "breakfast",
+          "name": "酒店早餐或外出品尝",
+          "description": "在酒店用早餐或外出寻找一家本地早餐店，最后体验昆明早点。",
+          "estimated_cost": 20
+        },
+        {
+          "type": "lunch",
+          "name": "简餐或赶路途中解决",
+          "description": "根据行程时间灵活安排，可在机场或火车站用餐。",
+          "estimated_cost": 40
+        },
+        {
+          "type": "dinner",
+          "name": "返程途中或家中",
+          "description": "旅程结束。",
+          "estimated_cost": 0
+        }
+      ]
+    }
+  ],
+  "weather_info": [
+    {
+      "date": "202

@@ -10,7 +10,7 @@
       <div class="hero-copy">
         <div class="hero-eyebrow">
           <span class="eyebrow-dot"></span>
-          Apple Glass Travel Experience
+          Welcome to multi-agent intelligent travel planning system
         </div>
         <div class="icon-wrapper">
           <span class="icon">
@@ -245,6 +245,11 @@
             :stroke-width="10"
           />
           <p class="loading-status">{{ loadingStatus }}</p>
+          <div class="timer-display">
+            <span class="pulse-dot"></span>
+            <ClockCircleOutlined />
+            <span>{{ formattedTime }}</span>
+          </div>
           <a-button danger ghost class="stop-button" @click="stopGeneration">
             停止生成
           </a-button>
@@ -255,7 +260,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, watch } from 'vue'
+import { ref, reactive, watch, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { generateTripPlan } from '@/services/api'
@@ -264,6 +269,7 @@ import {
   ApartmentOutlined,
   BankOutlined,
   CarOutlined,
+  ClockCircleOutlined,
   CoffeeOutlined,
   DeploymentUnitOutlined,
   EnvironmentOutlined,
@@ -288,8 +294,16 @@ const loadingProgress = ref(0)
 const loadingStatus = ref('')
 const dateValidationError = ref('')
 const isGenerationCanceled = ref(false)
+const elapsedTime = ref(0)
 let progressInterval: ReturnType<typeof setInterval> | null = null
+let timerInterval: ReturnType<typeof setInterval> | null = null
 let requestController: AbortController | null = null
+
+const formattedTime = computed(() => {
+  const minutes = Math.floor(elapsedTime.value / 60).toString().padStart(2, '0')
+  const seconds = (elapsedTime.value % 60).toString().padStart(2, '0')
+  return `${minutes}:${seconds}`
+})
 
 type TripFormState = Omit<TripFormData, 'start_date' | 'end_date'> & {
   start_date: Dayjs | null
@@ -335,13 +349,29 @@ const clearProgressInterval = () => {
   }
 }
 
+const clearTimer = () => {
+  if (timerInterval) {
+    clearInterval(timerInterval)
+    timerInterval = null
+  }
+}
+
+const startTimer = () => {
+  elapsedTime.value = 0
+  timerInterval = setInterval(() => {
+    elapsedTime.value++
+  }, 1000)
+}
+
 const resetLoadingState = () => {
   clearProgressInterval()
+  clearTimer()
   requestController = null
   loading.value = false
   loadingProgress.value = 0
   loadingStatus.value = ''
   isGenerationCanceled.value = false
+  elapsedTime.value = 0
 }
 
 const disabledStartDate = (current: Dayjs) => {
@@ -430,6 +460,7 @@ const handleSubmit = async () => {
   loadingProgress.value = 0
   loadingStatus.value = '正在初始化...'
   isGenerationCanceled.value = false
+  startTimer()
 
   // 模拟进度更新
   progressInterval = setInterval(() => {
@@ -464,12 +495,14 @@ const handleSubmit = async () => {
     const response = await generateTripPlan(requestData, requestController.signal)
 
     clearProgressInterval()
+    clearTimer()
     loadingProgress.value = 100
     loadingStatus.value = '已完成'
 
     if (response.success && response.data) {
       // 保存到sessionStorage
       sessionStorage.setItem('tripPlan', JSON.stringify(response.data))
+      sessionStorage.setItem('generationTime', elapsedTime.value.toString())
 
       message.success('旅行计划生成成功!')
 
@@ -482,6 +515,7 @@ const handleSubmit = async () => {
     }
   } catch (error: any) {
     clearProgressInterval()
+    clearTimer()
     if (error.message === '已停止生成' || isGenerationCanceled.value) {
       return
     }
@@ -972,6 +1006,33 @@ const handleSubmit = async () => {
   color: var(--primary-color);
   font-weight: 600;
   animation: pulse 1.5s ease-in-out infinite;
+}
+
+.timer-display {
+  margin-top: 8px;
+  font-size: 18px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-variant-numeric: tabular-nums;
+  font-family: monospace;
+}
+
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #52c41a;
+  box-shadow: 0 0 0 0 rgba(82, 196, 26, 0.4);
+  animation: pulse-green 2s infinite;
+}
+
+@keyframes pulse-green {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(82, 196, 26, 0.7); }
+  70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(82, 196, 26, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(82, 196, 26, 0); }
 }
 
 .stop-button {

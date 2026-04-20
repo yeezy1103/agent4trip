@@ -1,12 +1,16 @@
 """旅行规划API路由"""
 
-from fastapi import APIRouter, HTTPException
+import asyncio
+from fastapi import APIRouter, HTTPException, Request
 from ...models.schemas import (
     TripRequest,
     TripPlanResponse,
-    ErrorResponse
 )
-from ...agents.trip_planner_agent import get_trip_planner_agent
+from ...agents.trip_planner_agent import (
+    PlanningCancellationToken,
+    TripPlanningCancelledError,
+    get_trip_planner_agent,
+)
 
 router = APIRouter(prefix="/trip", tags=["旅行规划"])
 
@@ -17,7 +21,7 @@ router = APIRouter(prefix="/trip", tags=["旅行规划"])
     summary="生成旅行计划",
     description="根据用户输入的旅行需求,生成详细的旅行计划"
 )
-async def plan_trip(request: TripRequest):
+async def plan_trip(http_request: Request, request: TripRequest):
     """
     生成旅行计划
 
@@ -38,10 +42,26 @@ async def plan_trip(request: TripRequest):
         # 获取Agent实例
         print("🔄 获取多智能体系统实例...")
         agent = get_trip_planner_agent()
+        cancellation_token = PlanningCancellationToken()
 
         # 生成旅行计划
         print("🚀 开始生成旅行计划...")
-        trip_plan = agent.plan_trip(request)
+        planning_task = asyncio.create_task(
+            asyncio.to_thread(agent.plan_trip, request, cancellation_token)
+        )
+
+        while True:
+            try:
+                trip_plan = await asyncio.wait_for(asyncio.shield(planning_task), timeout=0.2)
+                break
+            except asyncio.TimeoutError:
+                if await http_request.is_disconnected():
+                    cancellation_token.cancel("客户端已停止生成请求")
+                    print("🛑 检测到客户端已断开连接，停止后续旅行规划流程")
+                    raise HTTPException(
+                        status_code=499,
+                        detail="已停止生成当前行程"
+                    )
 
         print("✅ 旅行计划生成成功,准备返回响应\n")
 
@@ -58,6 +78,14 @@ async def plan_trip(request: TripRequest):
             data=trip_plan
         )
 
+    except HTTPException:
+        raise
+    except TripPlanningCancelledError as e:
+        print(f"🛑 生成旅行计划已取消: {str(e)}")
+        raise HTTPException(
+            status_code=499,
+            detail="已停止生成当前行程"
+        )
     except Exception as e:
         print(f"❌ 生成旅行计划失败: {str(e)}")
         import traceback
@@ -78,12 +106,12 @@ async def health_check():
     try:
         # 检查Agent是否可用
         agent = get_trip_planner_agent()
-        
+
         return {
             "status": "healthy",
             "service": "trip-planner",
-            "agent_name": agent.agent.name,
-            "tools_count": len(agent.agent.list_tools())
+            "agent_name": agent.planner_agent.name,
+            "tools_count": len(agent.planner_agent.list_tools())
         }
     except Exception as e:
         raise HTTPException(

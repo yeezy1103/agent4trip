@@ -283,7 +283,10 @@ def _parse_weather_entries_from_text(raw_weather: str) -> List[Dict[str, Any]]:
         if not stripped:
             continue
 
-        date_match = re.search(r"\d{4}-\d{2}-\d{2}|\d{2}-\d{2}", stripped)
+        date_match = re.search(
+            r"\d{4}-\d{2}-\d{2}|\d{4}年\d{1,2}月\d{1,2}日(?:（[^）]+）)?|\d{1,2}月\d{1,2}日(?:（[^）]+）)?|\d{2}-\d{2}",
+            stripped,
+        )
         weather_keywords = _extract_weather_keywords(stripped)
         if not date_match and not weather_keywords:
             continue
@@ -339,7 +342,7 @@ def _parse_weather_entries_from_segments(raw_weather: str) -> List[Dict[str, Any
             continue
 
         date_match = re.search(
-            r"\d{4}-\d{2}-\d{2}|\d{1,2}月\d{1,2}日(?:（[^）]+）)?|\d{2}-\d{2}",
+            r"\d{4}-\d{2}-\d{2}|\d{4}年\d{1,2}月\d{1,2}日(?:（[^）]+）)?|\d{1,2}月\d{1,2}日(?:（[^）]+）)?|\d{2}-\d{2}",
             segment,
         )
         weather_keywords = _extract_weather_keywords(segment)
@@ -375,7 +378,7 @@ def _is_weather_segment_header(text: str) -> bool:
 
     return bool(
         re.match(
-            r"^(?:\d+\.\s*)?(?:\*{1,2})?\s*(?:\d{4}-\d{2}-\d{2}|\d{1,2}月\d{1,2}日(?:（[^）]+）)?|\d{2}-\d{2})",
+            r"^(?:\d+\.\s*)?(?:\*{1,2})?\s*(?:\d{4}-\d{2}-\d{2}|\d{4}年\d{1,2}月\d{1,2}日(?:（[^）]+）)?|\d{1,2}月\d{1,2}日(?:（[^）]+）)?|\d{2}-\d{2})",
             normalized,
         )
     )

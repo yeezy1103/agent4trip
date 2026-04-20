@@ -10,44 +10,55 @@
       </div>
 
       <div class="page-header-actions">
-        <a-button class="back-button" size="large" @click="goBack">
-          <ArrowLeftOutlined />
-          返回首页
-        </a-button>
-        <a-space size="middle" class="control-cluster">
-          <a-button v-if="!editMode" @click="toggleEditMode" type="default">
+        <!-- 耗时展示区域 -->
+        <div class="action-stats" v-if="generationTimeFormatted">
+          <div class="stat-badge">
+            <span class="pulse-dot"></span>
+            <span class="stat-label">AI 规划耗时</span>
+            <span class="stat-value">{{ generationTimeFormatted }}</span>
+          </div>
+        </div>
+
+        <!-- 操作按钮区域 -->
+        <div class="action-buttons">
+          <a-button class="toolbar-btn" @click="goBack">
+            <ArrowLeftOutlined />
+            返回首页
+          </a-button>
+          
+          <div class="toolbar-divider"></div>
+          
+          <a-button v-if="!editMode" @click="toggleEditMode" class="toolbar-btn">
             <EditOutlined />
             编辑行程
           </a-button>
-          <a-button v-else @click="saveChanges" type="primary">
+          <a-button v-else @click="saveChanges" type="primary" class="toolbar-btn primary-btn">
             <SaveOutlined />
             保存修改
           </a-button>
-          <a-button v-if="editMode" @click="cancelEdit" type="default">
+          <a-button v-if="editMode" @click="cancelEdit" danger class="toolbar-btn danger-btn">
             <CloseOutlined />
             取消编辑
           </a-button>
 
-          <a-dropdown v-if="!editMode">
+          <a-dropdown v-if="!editMode" placement="bottomRight">
             <template #overlay>
-              <a-menu>
+              <a-menu class="custom-dropdown-menu">
                 <a-menu-item key="image" @click="exportAsImage">
-                  <PictureOutlined />
-                  导出为图片
+                  <PictureOutlined /> 导出为图片
                 </a-menu-item>
                 <a-menu-item key="pdf" @click="exportAsPDF">
-                  <FilePdfOutlined />
-                  导出为PDF
+                  <FilePdfOutlined /> 导出为 PDF
                 </a-menu-item>
               </a-menu>
             </template>
-            <a-button type="default">
+            <a-button class="toolbar-btn">
               <DownloadOutlined />
               导出行程
-              <DownOutlined />
+              <DownOutlined class="dropdown-icon" />
             </a-button>
           </a-dropdown>
-        </a-space>
+        </div>
       </div>
     </div>
 
@@ -439,6 +450,7 @@ const originalPlan = ref<TripPlan | null>(null)
 const attractionPhotos = ref<Record<string, string>>({})
 const activeSection = ref('overview')
 const activeDays = ref<number[]>([0]) // 默认展开第一天
+const generationTimeFormatted = ref<string>('')
 let map: any = null
 
 const formattedOverallSuggestions = computed(() => {
@@ -473,6 +485,16 @@ const formattedOverallSuggestions = computed(() => {
 
 onMounted(async () => {
   const data = sessionStorage.getItem('tripPlan')
+  const timeData = sessionStorage.getItem('generationTime')
+  if (timeData) {
+    const elapsedSeconds = parseInt(timeData, 10)
+    if (!isNaN(elapsedSeconds)) {
+      const minutes = Math.floor(elapsedSeconds / 60).toString().padStart(2, '0')
+      const seconds = (elapsedSeconds % 60).toString().padStart(2, '0')
+      generationTimeFormatted.value = `${minutes}:${seconds}`
+    }
+  }
+
   if (data) {
     tripPlan.value = JSON.parse(data)
     // 等待DOM渲染完成后初始化地图
@@ -1192,19 +1214,117 @@ const drawRoutes = (AMap: any, attractions: any[]) => {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 14px;
-  padding: 16px;
-  border-radius: 26px;
-  border: 1px solid rgba(255, 255, 255, 0.58);
-  background: rgba(255, 255, 255, 0.44);
-  box-shadow: var(--shadow-md);
-  backdrop-filter: blur(22px);
-  -webkit-backdrop-filter: blur(22px);
+  gap: 16px;
+  padding: 20px;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.3));
+  box-shadow: 0 12px 32px rgba(31, 38, 135, 0.08);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
 }
 
-.control-cluster {
-  flex-wrap: wrap;
+.action-stats {
+  display: flex;
   justify-content: flex-end;
+  width: 100%;
+}
+
+.stat-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 99px;
+  box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.8), 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #52c41a;
+}
+
+.stat-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.stat-value {
+  font-size: 15px;
+  color: var(--primary-color);
+  font-weight: 700;
+  font-family: monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.toolbar-divider {
+  width: 1px;
+  height: 24px;
+  background: rgba(148, 163, 184, 0.3);
+  margin: 0 4px;
+}
+
+.toolbar-btn {
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.65);
+  font-weight: 600;
+  color: var(--text-primary);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 16px;
+  transition: all 0.2s ease;
+}
+
+.toolbar-btn:hover {
+  background: #fff;
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.primary-btn {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+  color: #fff;
+}
+
+.primary-btn:hover {
+  background: var(--primary-active);
+  border-color: var(--primary-active);
+  color: #fff;
+}
+
+.danger-btn {
+  background: #fff1f0;
+  border-color: #ffa39e;
+  color: #f5222d;
+}
+
+.danger-btn:hover {
+  background: #ffccc7;
+  border-color: #ff7875;
+  color: #f5222d;
+}
+
+.dropdown-icon {
+  font-size: 10px;
+  margin-left: 2px;
 }
 
 .menu-item-label,
@@ -1212,16 +1332,6 @@ const drawRoutes = (AMap: any, attractions: any[]) => {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-}
-
-.back-button {
-  border-radius: var(--radius-md);
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.back-button:hover {
-  color: var(--primary-color);
 }
 
 /* 内容布局 */
@@ -1928,7 +2038,7 @@ const drawRoutes = (AMap: any, attractions: any[]) => {
     padding: 14px;
   }
 
-  .control-cluster {
+  .action-buttons {
     justify-content: flex-start;
   }
 
