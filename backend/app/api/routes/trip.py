@@ -1,6 +1,7 @@
 """旅行规划API路由"""
 
 import asyncio
+import re
 from fastapi import APIRouter, HTTPException, Request
 from ...models.schemas import (
     TripRequest,
@@ -8,6 +9,7 @@ from ...models.schemas import (
 )
 from ...agents.trip_planner_agent import (
     PlanningCancellationToken,
+    InvalidTripRequestError,
     TripPlanningCancelledError,
     get_trip_planner_agent,
 )
@@ -32,9 +34,17 @@ async def plan_trip(http_request: Request, request: TripRequest):
         旅行计划响应
     """
     try:
+        city = (request.city or "").strip()
+        if not city:
+            raise HTTPException(status_code=400, detail="目的地城市不能为空")
+        if len(city) > 40:
+            raise HTTPException(status_code=400, detail="目的地城市过长，请输入真实城市名")
+        if not re.match(r"^[\u4e00-\u9fffA-Za-z0-9·\-\s]+$", city):
+            raise HTTPException(status_code=400, detail="目的地城市包含非法字符，请输入真实城市名，例如：北京/上海/Guangzhou")
+
         print(f"\n{'='*60}")
         print(f"📥 收到旅行规划请求:")
-        print(f"   城市: {request.city}")
+        print(f"   城市: {city}")
         print(f"   日期: {request.start_date} - {request.end_date}")
         print(f"   天数: {request.travel_days}")
         print(f"{'='*60}\n")
@@ -85,6 +95,12 @@ async def plan_trip(http_request: Request, request: TripRequest):
         raise HTTPException(
             status_code=499,
             detail="已停止生成当前行程"
+        )
+    except InvalidTripRequestError as e:
+        print(f"❌ 无效旅行请求: {str(e)}")
+        raise HTTPException(
+            status_code=400,
+            detail=str(e),
         )
     except Exception as e:
         print(f"❌ 生成旅行计划失败: {str(e)}")

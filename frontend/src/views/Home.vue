@@ -262,7 +262,7 @@
 <script setup lang="ts">
 import { ref, reactive, watch, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { message } from 'ant-design-vue'
+import { message, Modal } from 'ant-design-vue'
 import { generateTripPlan } from '@/services/api'
 import {
   AimOutlined,
@@ -386,10 +386,20 @@ const disabledEndDate = (current: Dayjs) => {
 
 const handleStartClick = (event: MouseEvent) => {
   const city = formData.city.trim()
+  const cityPattern = /^[\u4e00-\u9fffA-Za-z0-9·\-\s]{2,40}$/
 
   if (!city) {
     event.preventDefault()
     message.warning('请输入目的地城市')
+    return
+  }
+
+  if (!cityPattern.test(city)) {
+    event.preventDefault()
+    Modal.error({
+      title: '目的地无效',
+      content: '请输入真实城市名（仅支持中英文、数字、空格、-、·），例如：北京 / 上海 / Guangzhou'
+    })
     return
   }
 
@@ -426,8 +436,19 @@ const stopGeneration = () => {
 }
 
 const handleSubmit = async () => {
-  if (!formData.city.trim()) {
+  const city = formData.city.trim()
+  const cityPattern = /^[\u4e00-\u9fffA-Za-z0-9·\-\s]{2,40}$/
+
+  if (!city) {
     message.warning('请输入目的地城市')
+    return
+  }
+
+  if (!cityPattern.test(city)) {
+    Modal.error({
+      title: '目的地无效',
+      content: '请输入真实城市名（仅支持中英文、数字、空格、-、·），例如：北京 / 上海 / Guangzhou'
+    })
     return
   }
 
@@ -482,7 +503,7 @@ const handleSubmit = async () => {
 
   try {
     const requestData: TripFormData = {
-      city: formData.city.trim(),
+      city,
       start_date: formData.start_date.format('YYYY-MM-DD'),
       end_date: formData.end_date.format('YYYY-MM-DD'),
       travel_days: formData.travel_days,
@@ -519,7 +540,15 @@ const handleSubmit = async () => {
     if (error.message === '已停止生成' || isGenerationCanceled.value) {
       return
     }
-    message.error(error.message || '生成旅行计划失败,请稍后重试')
+    const text = error.message || '生成旅行计划失败,请稍后重试'
+    if (text.includes('目的地城市') || text.includes('城市名称') || text.includes('无法获取') || text.includes('天气信息')) {
+      Modal.error({
+        title: '输入有误',
+        content: text
+      })
+    } else {
+      message.error(text)
+    }
   } finally {
     const delay = isGenerationCanceled.value ? 0 : 1000
     setTimeout(() => {

@@ -478,19 +478,20 @@ class TripPlannerValidationTest(unittest.TestCase):
             raw_attractions="景点原始结果",
         )
 
-        self.assertIn("真实景点候选(只允许从以下列表中选择)", query)
+        self.assertIn("景点信息（来自工具搜索结果，供参考与编排）", query)
+        self.assertIn("结构化景点候选（若有，包含坐标，建议优先使用以便地图展示）", query)
         self.assertIn('"candidate_attractions"', query)
         self.assertIn("首都博物馆", query)
         self.assertIn("景山公园", query)
-        self.assertIn("真实酒店候选(只允许从以下列表中选择", query)
+        self.assertIn("酒店信息（来自工具搜索结果，供参考与编排）", query)
+        self.assertIn("结构化酒店候选（若有，包含坐标/价格等，建议优先使用）", query)
         self.assertIn("北京西城酒店", query)
         self.assertIn('"suitability": [\n        "high",\n        "medium",\n        "low"\n      ]', query)
         self.assertIn('"area_tag"', query)
         self.assertIn('"nearest_candidates"', query)
         self.assertIn('"hotel_rule"', query)
-        self.assertIn("景点原始搜索结果", query)
-        self.assertIn("避免出现“北边-南边-北边”这类跨日往返跳区", query)
-        self.assertIn("酒店要兼顾当天收尾景点与次日首段景点", query)
+        self.assertIn("景点原始结果", query)
+        self.assertIn("减少跨日往返跳区", query)
 
     def test_extract_candidate_hotels_handles_json_records(self):
         planner = MultiAgentTripPlanner.__new__(MultiAgentTripPlanner)
@@ -1331,6 +1332,24 @@ class TripPlannerRouteCancellationTest(unittest.TestCase):
 
         self.assertEqual(ctx.exception.status_code, 499)
         self.assertEqual(ctx.exception.detail, "已停止生成当前行程")
+
+    def test_trip_route_returns_400_when_city_is_invalid(self):
+        payload = TripRequest(
+            city="@@##",
+            start_date="2026-05-01",
+            end_date="2026-05-01",
+            travel_days=1,
+            transportation="公共交通",
+            accommodation="经济型酒店",
+            preferences=[],
+            free_text_input="",
+        )
+
+        with patch.object(trip_route, "get_trip_planner_agent", side_effect=AssertionError("不应初始化 Agent")):
+            with self.assertRaises(HTTPException) as ctx:
+                asyncio.run(trip_route.plan_trip(FakeRequest(False), payload))
+
+        self.assertEqual(ctx.exception.status_code, 400)
 
 
 if __name__ == "__main__":

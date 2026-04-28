@@ -81,26 +81,26 @@ class TripPlanningParsingService:
         cancellation_token: Optional[object] = None,
         check_cancellation: Optional[CancellationChecker] = None,
     ) -> Dict[str, Any]:
-        """Load planner JSON with sanitizing and optional LLM repair."""
-        parse_errors = []
-
-        for candidate in (json_candidate, self.sanitize_json_text(json_candidate)):
-            try:
-                return json.loads(candidate)
-            except Exception as exc:
-                parse_errors.append(str(exc))
-
-        self._check_cancellation(check_cancellation, cancellation_token, "JSON修复前")
-        repaired_json = self.repair_json_with_llm(
-            json_candidate,
-            cancellation_token=cancellation_token,
-            check_cancellation=check_cancellation,
-        )
+        """Load planner JSON (JSON 修复逻辑已禁用，用于验证模型是否能稳定输出严格 JSON)."""
         try:
-            return json.loads(repaired_json)
+            return json.loads(json_candidate)
         except Exception as exc:
-            parse_errors.append(f"LLM修复后仍失败: {exc}")
-            raise ValueError("；".join(parse_errors))
+            # 修 JSON 逻辑已按需求暂时禁用（sanitize_json_text + repair_json_with_llm）。
+            # 如需恢复，可参考以下原逻辑（注释保留）：
+            # parse_errors = []
+            # for candidate in (json_candidate, self.sanitize_json_text(json_candidate)):
+            #     try:
+            #         return json.loads(candidate)
+            #     except Exception as inner_exc:
+            #         parse_errors.append(str(inner_exc))
+            # self._check_cancellation(check_cancellation, cancellation_token, "JSON修复前")
+            # repaired_json = self.repair_json_with_llm(
+            #     json_candidate,
+            #     cancellation_token=cancellation_token,
+            #     check_cancellation=check_cancellation,
+            # )
+            # return json.loads(repaired_json)
+            raise ValueError(f"JSON 解析失败（未启用修复）: {exc}") from exc
 
     @staticmethod
     def sanitize_json_text(text: str) -> str:
