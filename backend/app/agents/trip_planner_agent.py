@@ -491,7 +491,8 @@ class MultiAgentTripPlanner:
         """执行单个 Agent，并打印 query / 工具返回 / 最终输出三段调试信息。"""
         self._check_cancellation(cancellation_token, f"{stage}开始前")
         print(f"\n🧪 [{stage}] Agent 调试开始")
-        print(f"   Agent: {agent.name}")
+        agent_name = getattr(agent, "name", None) or agent.__class__.__name__
+        print(f"   Agent: {agent_name}")
         print("   [1/3] 发送给 Agent 的 query:")
         print(_preview_text(query))
 

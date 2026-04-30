@@ -56,8 +56,8 @@ def parse_weather_response(raw_weather: str, start_date: str, travel_days: int) 
         source = parsed_entries[index] if index < len(parsed_entries) else parsed_entries[-1] if parsed_entries else {}
         normalized = WeatherInfo(
             date=trip_date,
-            day_weather=str(source.get("day_weather", "")).strip(),
-            night_weather=str(source.get("night_weather", "")).strip(),
+            day_weather=_normalize_weather_phrase(str(source.get("day_weather", "")).strip()),
+            night_weather=_normalize_weather_phrase(str(source.get("night_weather", "")).strip()),
             day_temp=_safe_temperature(source.get("day_temp")),
             night_temp=_safe_temperature(source.get("night_temp")),
             wind_direction=str(source.get("wind_direction", "")).strip(),
@@ -166,6 +166,9 @@ def is_indoor_attraction(attraction: Attraction) -> bool:
 
 def _parse_weather_entries(raw_weather: str) -> List[Dict[str, Any]]:
     """优先从 JSON 提取天气,失败时退回文本解析."""
+    markdown_entries = _parse_weather_entries_from_markdown_table(raw_weather)
+    if markdown_entries:
+        return markdown_entries
     json_entries = _parse_weather_entries_from_json(raw_weather)
     if json_entries:
         return json_entries
@@ -365,6 +368,108 @@ def _parse_weather_entries_from_segments(raw_weather: str) -> List[Dict[str, Any
         })
 
     return segments
+
+
+def _parse_weather_entries_from_markdown_table(raw_weather: str) -> List[Dict[str, Any]]:
+    normalized_text = raw_weather.replace("\\n", "\n")
+    lines = [line.strip() for line in normalized_text.splitlines() if line.strip()]
+    if not lines:
+        return []
+
+    header_index = -1
+    for index, line in enumerate(lines):
+        if "|" not in line:
+            continue
+        cells = _split_markdown_row(line)
+        if not cells:
+            continue
+        if "日期" in cells and ("白天天气" in cells or "日间天气" in cells or "天气" in cells) and ("夜间天气" in cells or "夜晚天气" in cells):
+            header_index = index
+            break
+
+    if header_index < 0 or header_index + 2 >= len(lines):
+        return []
+
+    header_cells = _split_markdown_row(lines[header_index])
+    separator_cells = _split_markdown_row(lines[header_index + 1])
+    if not header_cells or not separator_cells:
+        return []
+    if not any(re.fullmatch(r"-{2,}", re.sub(r"\s+", "", cell)) for cell in separator_cells):
+        return []
+
+    def column_index(*candidates: str) -> int:
+        for candidate in candidates:
+            if candidate in header_cells:
+                return header_cells.index(candidate)
+        return -1
+
+    date_col = column_index("日期")
+    day_weather_col = column_index("白天天气", "日间天气", "白天")
+    night_weather_col = column_index("夜间天气", "夜晚天气", "夜间", "夜晚")
+    day_temp_col = column_index("白天温度", "最高温度", "最高气温")
+    night_temp_col = column_index("夜间温度", "最低温度", "最低气温")
+    wind_col = column_index("风向风力", "风向/风力", "风向风速", "风力")
+
+    if day_weather_col < 0 and night_weather_col < 0:
+        return []
+
+    entries: List[Dict[str, Any]] = []
+    for line in lines[header_index + 2:]:
+        if "|" not in line:
+            break
+        cells = _split_markdown_row(line)
+        if not cells or all(not cell for cell in cells):
+            continue
+        if any(re.fullmatch(r"-{2,}", re.sub(r"\s+", "", cell)) for cell in cells):
+            continue
+
+        date_value = cells[date_col] if 0 <= date_col < len(cells) else ""
+        day_weather_value = cells[day_weather_col] if 0 <= day_weather_col < len(cells) else ""
+        night_weather_value = cells[night_weather_col] if 0 <= night_weather_col < len(cells) else ""
+        day_temp_value = cells[day_temp_col] if 0 <= day_temp_col < len(cells) else ""
+        night_temp_value = cells[night_temp_col] if 0 <= night_temp_col < len(cells) else ""
+        wind_value = cells[wind_col] if 0 <= wind_col < len(cells) else ""
+
+        wind_direction_match = re.search(r"(东北风|东南风|西北风|西南风|东风|西风|南风|北风)", wind_value)
+        wind_power_match = re.search(r"(\d+\s*-\s*\d+级|\d+级)", wind_value)
+
+        normalized_day = _normalize_weather_phrase(day_weather_value)
+        normalized_night = _normalize_weather_phrase(night_weather_value)
+
+        if not any([normalized_day, normalized_night, day_temp_value, night_temp_value, wind_value, date_value]):
+            continue
+
+        entries.append(
+            {
+                "date": date_value,
+                "day_weather": normalized_day,
+                "night_weather": normalized_night or normalized_day,
+                "day_temp": _safe_temperature(day_temp_value),
+                "night_temp": _safe_temperature(night_temp_value),
+                "wind_direction": wind_direction_match.group(0) if wind_direction_match else "",
+                "wind_power": wind_power_match.group(0) if wind_power_match else "",
+            }
+        )
+
+    return entries
+
+
+def _split_markdown_row(line: str) -> List[str]:
+    stripped = line.strip()
+    if not stripped.startswith("|") or "|" not in stripped[1:]:
+        return []
+    parts = [part.strip() for part in stripped.strip("|").split("|")]
+    return parts
+
+
+def _normalize_weather_phrase(text: str) -> str:
+    cleaned = (text or "").strip()
+    if not cleaned:
+        return ""
+    keywords = _extract_weather_keywords(cleaned)
+    if keywords:
+        return keywords[0]
+    return cleaned
 
 
 def _is_weather_segment_header(text: str) -> bool:

@@ -221,6 +221,29 @@ class WeatherPlanningServiceTest(unittest.TestCase):
         self.assertEqual(weather_info[3].night_weather, "雷阵雨")
         self.assertEqual(weather_info[3].risk_level, "high")
 
+    def test_parse_weather_response_prefers_markdown_table_over_notes(self):
+        raw_weather = """
+        **广州市天气预报**
+
+        | 日期 | 白天天气 | 夜间天气 | 白天温度 | 夜间温度 | 风向风力 |
+        |------|---------|---------|---------|---------|---------|
+        | 4月30日 (周四) | ☁️ 多云 | ☁️ 多云 | 25°C | 18°C | 北风1-3级 |
+        | 5月1日 (周五) | ⛈️ 雷阵雨 | ⛈️ 雷阵雨 | 26°C | 19°C | 北风1-3级 |
+
+        备注：4月30日局部也有雷阵雨可能性
+        """
+
+        weather_info = parse_weather_response(raw_weather, "2026-04-30", 2)
+
+        self.assertEqual(len(weather_info), 2)
+        self.assertEqual(weather_info[0].date, "2026-04-30")
+        self.assertEqual(weather_info[0].day_weather, "多云")
+        self.assertEqual(weather_info[0].night_weather, "多云")
+        self.assertEqual(weather_info[0].risk_level, "low")
+        self.assertEqual(weather_info[1].date, "2026-05-01")
+        self.assertEqual(weather_info[1].day_weather, "雷阵雨")
+        self.assertEqual(weather_info[1].risk_level, "high")
+
     def test_parse_weather_response_handles_full_chinese_date_headers(self):
         raw_weather = """
         **2026年4月20日（星期一）**
