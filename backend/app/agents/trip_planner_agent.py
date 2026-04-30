@@ -266,6 +266,7 @@ class MultiAgentTripPlanner:
                 cancellation_exception_cls=TripPlanningCancelledError,
             )
             self.postprocess_service = TripPlanningPostProcessService()
+            self.stage_tool_results: Dict[str, List[Dict[str, str]]] = {}
 
             # 创建共享的MCP工具(只创建一次)
             print("  - 创建共享MCP工具...")
@@ -380,9 +381,10 @@ class MultiAgentTripPlanner:
                 "天气查询",
             )
             print(f"天气查询结果: {weather_response[:200]}...\n")
-            self._guard_weather_response(weather_response, request.city)
+            weather_raw_payload = self._select_weather_parsing_source(weather_response)
+            self._guard_weather_response(weather_raw_payload, request.city)
             weather_info = parse_weather_response(
-                raw_weather=weather_response,
+                raw_weather=weather_raw_payload,
                 start_date=request.start_date,
                 travel_days=request.travel_days,
             )
@@ -511,18 +513,44 @@ class MultiAgentTripPlanner:
         self._check_cancellation(cancellation_token, f"{stage}完成后")
         return result
 
+    def _ensure_stage_tool_results(self) -> Dict[str, List[Dict[str, str]]]:
+        cache = getattr(self, "stage_tool_results", None)
+        if cache is None:
+            cache = {}
+            self.stage_tool_results = cache
+        return cache
+
+    def _select_weather_parsing_source(self, weather_response: str) -> str:
+        """天气解析优先使用 maps_weather 工具原始结果，避免受 Agent 表格文案影响。"""
+        stage_results = self._ensure_stage_tool_results().get("天气查询", [])
+        for item in reversed(stage_results):
+            tool_name = item.get("tool_name", "")
+            payload = item.get("result", "")
+            if "weather" not in tool_name.lower():
+                continue
+            if payload and any(keyword in payload for keyword in ('"forecasts"', '"dayweather"', '"nightweather"', '"date"')):
+                return payload
+        return weather_response
+
     @contextmanager
     def _debug_capture_agent_tools(self, agent: SimpleAgent, stage: str):
         """临时包装 Agent 工具，打印工具入参与返回值。"""
         registry = getattr(agent, "tool_registry", None)
         tools = registry.get_all_tools() if registry else []
         originals: List[tuple[Any, Any]] = []
+        self._ensure_stage_tool_results()[stage] = []
 
         def make_wrapper(tool: Any, original_run: Any):
             def wrapped_run(parameters: Dict[str, Any]) -> str:
                 print(f"   [2/3] 工具调用前 -> {tool.name}")
                 print(f"         参数: {_preview_text(parameters, limit=300)}")
                 result = original_run(parameters)
+                self._ensure_stage_tool_results()[stage].append(
+                    {
+                        "tool_name": getattr(tool, "name", "") or tool.__class__.__name__,
+                        "result": str(result),
+                    }
+                )
                 print(f"   [2/3] 工具返回后 <- {tool.name}")
                 print(f"         返回: {_preview_text(result)}")
                 return result

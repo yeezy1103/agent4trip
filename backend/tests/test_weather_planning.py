@@ -564,6 +564,36 @@ class TripPlannerValidationTest(unittest.TestCase):
         self.assertIn("当前没有可用天气风险信息，按正常需求搜索景点", query)
         self.assertIn("如果用户没有特别的要求，则优先搜索当地热门景点", query)
 
+    def test_select_weather_parsing_source_prefers_tool_payload(self):
+        planner = MultiAgentTripPlanner.__new__(MultiAgentTripPlanner)
+        planner.stage_tool_results = {
+            "天气查询": [
+                {
+                    "tool_name": "amap_maps_weather",
+                    "result": json.dumps(
+                        {
+                            "city": "广州市",
+                            "forecasts": [
+                                {
+                                    "date": "2026-04-30",
+                                    "dayweather": "多云",
+                                    "nightweather": "多云",
+                                }
+                            ],
+                        },
+                        ensure_ascii=False,
+                    ),
+                }
+            ]
+        }
+
+        selected = planner._select_weather_parsing_source(
+            "好的，以下是广州最新的天气预报信息：| 日期 | 白天天气 |"
+        )
+
+        self.assertIn('"forecasts"', selected)
+        self.assertIn('"dayweather"', selected)
+
     def test_extract_candidate_hotels_handles_json_records(self):
         planner = MultiAgentTripPlanner.__new__(MultiAgentTripPlanner)
         raw_hotels = json.dumps(
