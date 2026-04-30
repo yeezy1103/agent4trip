@@ -114,7 +114,10 @@ class TripPlanningPostProcessService:
         trip_plan.warnings = warnings
 
         warnings.extend(self._validate_cross_day_spatial_flow(trip_plan.days))
-        trip_plan.budget = self._recalculate_budget(trip_plan.days)
+        trip_plan.budget = self._merge_budget_with_fallback(
+            trip_plan.budget,
+            trip_plan.days,
+        )
         trip_plan.overall_suggestions = self._merge_weather_suggestions(
             trip_plan.overall_suggestions,
             weather_info,
@@ -711,6 +714,10 @@ class TripPlanningPostProcessService:
         if matched_hotel:
             hotel = matched_hotel.model_copy(
                 update={
+                    "estimated_cost": hotel.estimated_cost or matched_hotel.estimated_cost,
+                    "price_range": hotel.price_range or matched_hotel.price_range,
+                    "rating": hotel.rating or matched_hotel.rating,
+                    "type": hotel.type or matched_hotel.type,
                     "distance": hotel.distance or matched_hotel.distance,
                 }
             )
@@ -724,6 +731,10 @@ class TripPlanningPostProcessService:
 
         if not hotel.location:
             hotel.type = hotel.type or request.accommodation
+            hotel.estimated_cost = hotel.estimated_cost or self._estimate_hotel_cost_with_request(
+                hotel,
+                request,
+            )
             if candidate_hotels:
                 warnings.append(f"{day.date} 酒店缺少有效坐标且无法与真实候选对齐")
             return hotel, warnings
@@ -766,7 +777,50 @@ class TripPlanningPostProcessService:
             next_day.attractions if next_day else [],
             hotel.location,
         )
+        hotel.estimated_cost = hotel.estimated_cost or self._estimate_hotel_cost_with_request(
+            hotel,
+            request,
+        )
         return hotel, warnings
+
+    def _merge_budget_with_fallback(
+        self,
+        existing_budget: Optional[Budget],
+        days: List[DayPlan],
+    ) -> Budget:
+        recalculated = self._recalculate_budget(days)
+        if not existing_budget:
+            return recalculated
+
+        total_attractions = existing_budget.total_attractions or recalculated.total_attractions
+        total_hotels = existing_budget.total_hotels or recalculated.total_hotels
+        total_meals = existing_budget.total_meals or recalculated.total_meals
+        total_transportation = (
+            existing_budget.total_transportation or recalculated.total_transportation
+        )
+        total = existing_budget.total or (
+            total_attractions + total_hotels + total_meals + total_transportation
+        )
+        return Budget(
+            total_attractions=total_attractions,
+            total_hotels=total_hotels,
+            total_meals=total_meals,
+            total_transportation=total_transportation,
+            total=total,
+        )
+
+    def _estimate_hotel_cost_with_request(
+        self,
+        hotel: Hotel,
+        request: TripRequest,
+    ) -> int:
+        hotel_type = hotel.type or request.accommodation
+        rating = TripPlanningParsingService.safe_float(hotel.rating)
+        return TripPlanningParsingService.estimate_hotel_cost_with_fallback(
+            price_text=hotel.price_range,
+            hotel_type=hotel_type,
+            rating=rating,
+        )
 
     def _validate_spatial_day_plan(
         self,

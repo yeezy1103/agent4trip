@@ -527,7 +527,11 @@ class TripPlanningParsingService:
             or record.get("priceLevel")
             or ""
         ).strip()
-        estimated_cost = self.estimate_hotel_cost(price_range)
+        estimated_cost = self.estimate_hotel_cost_with_fallback(
+            price_text=price_range,
+            hotel_type=hotel_type,
+            rating=rating_float,
+        )
 
         return Hotel(
             name=name,
@@ -750,6 +754,89 @@ class TripPlanningParsingService:
         if len(values) >= 2:
             return int(sum(values[:2]) / 2)
         return values[0]
+
+    @classmethod
+    def estimate_hotel_cost_with_fallback(
+        cls,
+        price_text: str,
+        hotel_type: str,
+        rating: Optional[float],
+    ) -> int:
+        direct = cls.estimate_hotel_cost(price_text)
+        if direct > 0:
+            return direct
+
+        price_level_cost = cls.estimate_hotel_cost_from_price_level(price_text)
+        if price_level_cost > 0:
+            return cls.adjust_hotel_cost_by_rating(price_level_cost, rating)
+
+        type_cost = cls.estimate_hotel_cost_from_type(hotel_type)
+        if type_cost > 0:
+            return cls.adjust_hotel_cost_by_rating(type_cost, rating)
+
+        return 300
+
+    @staticmethod
+    def estimate_hotel_cost_from_price_level(price_text: str) -> int:
+        normalized = (price_text or "").strip()
+        if not normalized:
+            return 0
+
+        symbol_count = normalized.count("￥") + normalized.count("¥") + normalized.count("$")
+        if symbol_count >= 4:
+            return 900
+        if symbol_count == 3:
+            return 600
+        if symbol_count == 2:
+            return 350
+        if symbol_count == 1:
+            return 200
+
+        if any(keyword in normalized for keyword in ("低价", "便宜", "实惠", "平价")):
+            return 220
+        if any(keyword in normalized for keyword in ("中档", "中等", "适中")):
+            return 350
+        if any(keyword in normalized for keyword in ("高档", "高端", "豪华", "奢华")):
+            return 800
+
+        return 0
+
+    @staticmethod
+    def estimate_hotel_cost_from_type(hotel_type: str) -> int:
+        text = (hotel_type or "").strip()
+        if not text:
+            return 0
+        if any(keyword in text for keyword in ("青旅", "青年旅社", "旅舍")):
+            return 120
+        if any(keyword in text for keyword in ("经济", "快捷", "连锁")):
+            return 220
+        if any(keyword in text for keyword in ("舒适", "三星", "3星")):
+            return 350
+        if any(keyword in text for keyword in ("高档", "精品", "四星", "4星")):
+            return 550
+        if any(keyword in text for keyword in ("豪华", "五星", "5星")):
+            return 900
+        if any(keyword in text for keyword in ("民宿", "客栈", "公寓")):
+            return 280
+        return 300
+
+    @staticmethod
+    def adjust_hotel_cost_by_rating(cost: int, rating: Optional[float]) -> int:
+        if not rating:
+            return int(round(cost / 10) * 10)
+
+        multiplier = 1.0
+        if rating >= 4.8:
+            multiplier = 1.15
+        elif rating >= 4.5:
+            multiplier = 1.05
+        elif rating <= 3.5:
+            multiplier = 0.8
+        elif rating <= 4.0:
+            multiplier = 0.9
+
+        adjusted = int(round((cost * multiplier) / 10) * 10)
+        return max(80, adjusted)
 
     @staticmethod
     def normalize_place_name(text: str, keep_suffix: bool = True) -> str:

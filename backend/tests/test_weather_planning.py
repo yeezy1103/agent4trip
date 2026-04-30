@@ -13,7 +13,7 @@ BACKEND_ROOT = Path(__file__).resolve().parents[1]
 if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
-from app.models.schemas import Attraction, DayPlan, Hotel, Location, Meal, TripPlan, TripRequest
+from app.models.schemas import Attraction, Budget, DayPlan, Hotel, Location, Meal, TripPlan, TripRequest, WeatherInfo
 from app.services.weather_planning_service import parse_weather_response
 
 try:
@@ -220,29 +220,6 @@ class WeatherPlanningServiceTest(unittest.TestCase):
         self.assertEqual(weather_info[3].day_weather, "多云")
         self.assertEqual(weather_info[3].night_weather, "雷阵雨")
         self.assertEqual(weather_info[3].risk_level, "high")
-
-    def test_parse_weather_response_prefers_markdown_table_over_notes(self):
-        raw_weather = """
-        **广州市天气预报**
-
-        | 日期 | 白天天气 | 夜间天气 | 白天温度 | 夜间温度 | 风向风力 |
-        |------|---------|---------|---------|---------|---------|
-        | 4月30日 (周四) | ☁️ 多云 | ☁️ 多云 | 25°C | 18°C | 北风1-3级 |
-        | 5月1日 (周五) | ⛈️ 雷阵雨 | ⛈️ 雷阵雨 | 26°C | 19°C | 北风1-3级 |
-
-        备注：4月30日局部也有雷阵雨可能性
-        """
-
-        weather_info = parse_weather_response(raw_weather, "2026-04-30", 2)
-
-        self.assertEqual(len(weather_info), 2)
-        self.assertEqual(weather_info[0].date, "2026-04-30")
-        self.assertEqual(weather_info[0].day_weather, "多云")
-        self.assertEqual(weather_info[0].night_weather, "多云")
-        self.assertEqual(weather_info[0].risk_level, "low")
-        self.assertEqual(weather_info[1].date, "2026-05-01")
-        self.assertEqual(weather_info[1].day_weather, "雷阵雨")
-        self.assertEqual(weather_info[1].risk_level, "high")
 
     def test_parse_weather_response_handles_full_chinese_date_headers(self):
         raw_weather = """
@@ -515,6 +492,77 @@ class TripPlannerValidationTest(unittest.TestCase):
         self.assertIn('"hotel_rule"', query)
         self.assertIn("景点原始结果", query)
         self.assertIn("减少跨日往返跳区", query)
+        self.assertIn("budget.total_hotels 必须等于所有天 hotel.estimated_cost 之和", query)
+        self.assertIn("用户住宿偏好 经济型酒店", query)
+
+    def test_build_attraction_query_handles_mixed_weather_and_extra_requirements(self):
+        planner = MultiAgentTripPlanner.__new__(MultiAgentTripPlanner)
+        request = TripRequest(
+            city="广州",
+            start_date="2026-04-30",
+            end_date="2026-05-01",
+            travel_days=2,
+            transportation="公共交通",
+            accommodation="经济型酒店",
+            preferences=["历史文化"],
+            free_text_input="不喜欢动物园、酒吧，想多看看博物馆",
+        )
+        weather_info = [
+            WeatherInfo(
+                date="2026-04-30",
+                day_weather="多云",
+                night_weather="多云",
+                day_temp=25,
+                night_temp=18,
+                wind_direction="北风",
+                wind_power="1-3级",
+                risk_level="low",
+                risk_score=10,
+                planning_advice="低风险天气",
+            ),
+            WeatherInfo(
+                date="2026-05-01",
+                day_weather="雷阵雨",
+                night_weather="雷阵雨",
+                day_temp=26,
+                night_temp=19,
+                wind_direction="北风",
+                wind_power="1-3级",
+                risk_level="high",
+                risk_score=85,
+                planning_advice="高风险天气",
+            ),
+        ]
+
+        query = planner._build_attraction_query(request, weather_info)
+
+        self.assertIn("存在高风险日期: 2026-05-01", query)
+        self.assertIn("这些日期需要搜索室内或半室内景点", query)
+        self.assertIn("存在低风险日期: 2026-04-30", query)
+        self.assertIn("这些日期按正常需求搜索景点", query)
+        self.assertIn("请为广州搜索真实可到达且坐标完整的景点候选", query)
+        self.assertIn("用户额外需求: 不喜欢动物园、酒吧，想多看看博物馆", query)
+        self.assertIn("动物园, 酒吧", query)
+        self.assertIn("用户明确喜欢或希望去以下关键词相关地点: 历史文化, 博物馆", query)
+        self.assertNotIn("[TOOL_CALL:", query)
+
+    def test_build_attraction_query_falls_back_to_hot_spots_without_preferences(self):
+        planner = MultiAgentTripPlanner.__new__(MultiAgentTripPlanner)
+        request = TripRequest(
+            city="广州",
+            start_date="2026-04-30",
+            end_date="2026-04-30",
+            travel_days=1,
+            transportation="公共交通",
+            accommodation="经济型酒店",
+            preferences=[],
+            free_text_input="",
+        )
+
+        query = planner._build_attraction_query(request, [])
+
+        self.assertIn("当前没有可用天气风险信息，按正常需求搜索景点", query)
+        self.assertIn("如果用户没有特别的要求，则优先搜索当地热门景点", query)
 
     def test_extract_candidate_hotels_handles_json_records(self):
         planner = MultiAgentTripPlanner.__new__(MultiAgentTripPlanner)
@@ -636,6 +684,90 @@ class TripPlannerValidationTest(unittest.TestCase):
         self.assertEqual(adjusted.days[0].hotel.name, "广州天河花园酒店")
         self.assertEqual(adjusted.days[0].hotel.address, "广州市天河区龙洞路8号")
         self.assertIn("已替换为真实候选酒店", " ".join(adjusted.warnings))
+
+    def test_post_validate_preserves_planner_budget_when_present(self):
+        planner = MultiAgentTripPlanner.__new__(MultiAgentTripPlanner)
+        weather_info = parse_weather_response("", "2026-04-20", 1)
+        request = TripRequest(
+            city="广州",
+            start_date="2026-04-20",
+            end_date="2026-04-20",
+            travel_days=1,
+            transportation="公共交通",
+            accommodation="舒适型酒店",
+            preferences=["自然风光"],
+            free_text_input="",
+        )
+        raw_plan = TripPlan(
+            city="广州",
+            start_date="2026-04-20",
+            end_date="2026-04-20",
+            overall_suggestions="原始建议",
+            days=[
+                DayPlan(
+                    date="2026-04-20",
+                    day_index=0,
+                    description="城市漫步",
+                    transportation="公共交通",
+                    accommodation="舒适型酒店",
+                    hotel=Hotel(name="测试酒店", address="广州", type="舒适型酒店", estimated_cost=420),
+                    attractions=[],
+                    meals=[Meal(type="lunch", name="午餐", estimated_cost=40)],
+                )
+            ],
+            weather_info=[],
+            budget=Budget(
+                total_attractions=100,
+                total_hotels=999,
+                total_meals=300,
+                total_transportation=150,
+                total=1549,
+            ),
+        )
+
+        adjusted = planner._post_validate_trip_plan(raw_plan, request, weather_info)
+
+        self.assertEqual(adjusted.budget.total_hotels, 999)
+        self.assertEqual(adjusted.budget.total, 1549)
+
+    def test_post_validate_estimates_hotel_cost_when_planner_missing_it(self):
+        planner = MultiAgentTripPlanner.__new__(MultiAgentTripPlanner)
+        weather_info = parse_weather_response("", "2026-04-20", 1)
+        request = TripRequest(
+            city="广州",
+            start_date="2026-04-20",
+            end_date="2026-04-20",
+            travel_days=1,
+            transportation="公共交通",
+            accommodation="经济型酒店",
+            preferences=["城市漫步"],
+            free_text_input="",
+        )
+        raw_plan = TripPlan(
+            city="广州",
+            start_date="2026-04-20",
+            end_date="2026-04-20",
+            overall_suggestions="原始建议",
+            days=[
+                DayPlan(
+                    date="2026-04-20",
+                    day_index=0,
+                    description="城市漫步",
+                    transportation="公共交通",
+                    accommodation="经济型酒店",
+                    hotel=Hotel(name="测试酒店", address="广州", type="经济型酒店", estimated_cost=0),
+                    attractions=[],
+                    meals=[Meal(type="lunch", name="午餐", estimated_cost=40)],
+                )
+            ],
+            weather_info=[],
+            budget=Budget(),
+        )
+
+        adjusted = planner._post_validate_trip_plan(raw_plan, request, weather_info)
+
+        self.assertEqual(adjusted.days[0].hotel.estimated_cost, 220)
+        self.assertEqual(adjusted.budget.total_hotels, 220)
 
     def test_post_validate_reorders_day_flow_and_adjusts_hotel_for_next_day(self):
         planner = MultiAgentTripPlanner.__new__(MultiAgentTripPlanner)

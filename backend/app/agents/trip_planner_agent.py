@@ -70,6 +70,8 @@ ATTRACTION_AGENT_PROMPT = """你是景点搜索专家。你的任务是根据城
 
 **重要提示:**
 你必须使用工具来搜索景点!不要自己编造景点信息!
+你需要根据用户提供的天气风险、喜欢关键词、不喜欢关键词、额外需求，自主决定搜索关键词并调用工具。
+如果用户没有特别偏好或限制，请优先搜索当地热门景点。
 
 **工具调用格式:**
 使用maps_text_search工具时,必须严格按照以下格式:
@@ -407,7 +409,11 @@ class MultiAgentTripPlanner:
 
             # 步骤3: 酒店推荐Agent搜索酒店
             print("🏨 步骤3: 搜索酒店...")
-            hotel_query = f"请搜索{request.city}的{request.accommodation}酒店"
+            hotel_query = (
+                f"请搜索{request.city}的{request.accommodation}酒店。"
+                f"如果工具返回里包含价格、价格区间、priceLevel、评分、酒店类型，请原样保留，"
+                f"以便后续规划阶段生成 hotel.estimated_cost 和 budget.total_hotels。"
+            )
             hotel_response = self._run_agent_with_cancellation(
                 self.hotel_agent,
                 hotel_query,
@@ -540,34 +546,98 @@ class MultiAgentTripPlanner:
         weather_info: Optional[List[WeatherInfo]] = None,
     ) -> str:
         """构建景点搜索查询,让搜索阶段就参考天气风险."""
-        primary_keyword = request.preferences[0] if request.preferences else "景点"
         weather_info = weather_info or []
         high_risk_days = [item.date for item in weather_info if item.risk_level == "high"]
         medium_risk_days = [item.date for item in weather_info if item.risk_level == "medium"]
+        low_risk_days = [item.date for item in weather_info if item.risk_level == "low"]
+        excluded_keywords = self._extract_excluded_keywords(request.free_text_input)
+        preferred_keywords = self._extract_preferred_keywords(request)
 
+        instructions = [
+            f"请为{request.city}搜索真实可到达且坐标完整的景点候选。"
+        ]
         if high_risk_days:
-            return (
-                f"请优先为{request.city}搜索适合雨天或强对流天气的室内、半室内景点。"
-                f"本次行程中以下日期风险较高: {', '.join(high_risk_days)}。"
-                f"请优先搜索与“{primary_keyword}”相关的博物馆、美术馆、科技馆、纪念馆、商场、室内展馆等，"
-                f"并避免把公园、步行街、山岳、湖滨等明显户外景点作为主要候选。"
-                f"如有必要可多次调用工具补充候选，但输出必须基于工具结果。\n"
-                f"[TOOL_CALL:amap_maps_text_search:keywords={primary_keyword} 博物馆,city={request.city}]"
+            instructions.append(
+                f"存在高风险日期: {', '.join(high_risk_days)}。这些日期需要搜索室内或半室内景点。"
             )
-
         if medium_risk_days:
-            return (
-                f"请为{request.city}搜索与“{primary_keyword}”相关、且适合中风险天气的景点。"
-                f"以下日期存在降雨或出行不稳定因素: {', '.join(medium_risk_days)}。"
-                f"请优先考虑同一区域、可快速避雨的室内或半室内景点，并减少远距离户外候选。\n"
-                f"[TOOL_CALL:amap_maps_text_search:keywords={primary_keyword} 室内景点,city={request.city}]"
+            instructions.append(
+                f"存在中风险日期: {', '.join(medium_risk_days)}。这些日期优先搜索可快速避雨、同一区域的景点。"
             )
+        if low_risk_days:
+            instructions.append(
+                f"存在低风险日期: {', '.join(low_risk_days)}。这些日期按正常需求搜索景点。"
+            )
+        elif not weather_info:
+            instructions.append("当前没有可用天气风险信息，按正常需求搜索景点。")
 
-        return (
-            f"请使用amap_maps_text_search工具搜索{request.city}的{primary_keyword}相关景点,并优先返回真实可到达、"
-            f"坐标完整的候选。\n"
-            f"[TOOL_CALL:amap_maps_text_search:keywords={primary_keyword},city={request.city}]"
-        )
+        if excluded_keywords:
+            instructions.append(
+                f"用户明确不喜欢或希望避免以下关键词相关地点: {', '.join(excluded_keywords)}。请避免搜索。"
+            )
+        if request.free_text_input:
+            instructions.append(f"用户额外需求: {request.free_text_input}")
+        if preferred_keywords:
+            instructions.append(
+                f"用户明确喜欢或希望去以下关键词相关地点: {', '.join(preferred_keywords)}。"
+            )
+        else:
+            instructions.append("如果用户没有特别的要求，则优先搜索当地热门景点。")
+        instructions.append("如有必要可多次调用工具补充候选，但输出必须基于工具结果。")
+        return "\n".join(instructions)
+
+    def _extract_excluded_keywords(self, free_text_input: str) -> List[str]:
+        """从额外需求中提取用户明确不想去的地点关键词."""
+        text = (free_text_input or "").strip()
+        if not text:
+            return []
+
+        pattern = r"(?:不喜欢|不想去|不要|避免|排除|不考虑)([^。；;\n]+)"
+        candidates: List[str] = []
+        for segment in re.findall(pattern, text):
+            segment = re.split(r"(?:，|,)?\s*(?:想|喜欢|希望|想去|想看|想逛|想体验|想打卡)", segment, maxsplit=1)[0]
+            cleaned_segment = re.sub(r"^(去|逛|看|到|住|安排|前往)", "", segment.strip())
+            for token in re.split(r"[、，,/和及与以及 ]+", cleaned_segment):
+                keyword = token.strip("“”\"'（）()")
+                keyword = re.sub(r"^(太|很|比较|特别)", "", keyword)
+                keyword = re.sub(r"(这些地方|这种地方|之类的地方|相关的地方)$", "", keyword)
+                if len(keyword) < 2:
+                    continue
+                if keyword in {"一下", "一下子", "安排", "地方", "景点", "酒店"}:
+                    continue
+                if keyword not in candidates:
+                    candidates.append(keyword)
+        return candidates[:8]
+
+    def _extract_preferred_keywords(self, request: TripRequest) -> List[str]:
+        """汇总用户偏好和额外需求中明确想去的关键词."""
+        candidates: List[str] = []
+        excluded = set(self._extract_excluded_keywords(request.free_text_input))
+
+        for item in request.preferences or []:
+            keyword = (item or "").strip()
+            if keyword and keyword not in excluded and keyword not in candidates:
+                candidates.append(keyword)
+
+        text = (request.free_text_input or "").strip()
+        if not text:
+            return candidates[:8]
+
+        pattern = r"(?<!不)(?:喜欢|想去|想看|想逛|希望去|希望看|想体验|想打卡|想多看看|想多逛逛)([^。；;\n]+)"
+        for segment in re.findall(pattern, text):
+            segment = re.split(r"(?:，|,)?\s*(?:不喜欢|不想去|不要|避免|排除|不考虑)", segment, maxsplit=1)[0]
+            cleaned_segment = re.sub(r"^(去|逛|看|体验|打卡|多去|多看|多逛)", "", segment.strip())
+            for token in re.split(r"[、，,/和及与以及 ]+", cleaned_segment):
+                keyword = token.strip("“”\"'（）()")
+                keyword = re.sub(r"^(更|比较|特别|多|尽量)", "", keyword)
+                keyword = re.sub(r"(这些地方|这种地方|之类的地方|相关的地方)$", "", keyword)
+                if len(keyword) < 2:
+                    continue
+                if keyword in excluded or keyword in {"一下", "一下子", "地方", "景点"}:
+                    continue
+                if keyword not in candidates:
+                    candidates.append(keyword)
+        return candidates[:8]
 
     def _build_planner_query(
         self,
@@ -639,6 +709,8 @@ class MultiAgentTripPlanner:
 7. weather_info字段必须以结构化天气风险为准,不要自行编造额外日期
 8. overall_suggestions必须给出天气相关出行建议,并说明多日片区衔接逻辑
 9. day.description需要解释路线组织逻辑,例如“同片区顺路串联”“酒店便于衔接次日上午景点”
+10. 每天 hotel.estimated_cost 必须填写,并优先依据酒店搜索结果中的 price_range/price/priceLevel; 若工具未返回确切价格,则结合酒店类型、评分、用户住宿偏好 {request.accommodation} 做合理估算
+11. budget.total_hotels 必须等于所有天 hotel.estimated_cost 之和,不要留空或填 0
 """
         if request.free_text_input:
             query += f"\n**额外要求:** {request.free_text_input}"
