@@ -1,0 +1,92 @@
+\mode<presentation>
+
+\newif\ifbeamer@secheader
+\beamer@secheaderfalse
+
+%\DeclareOptionBeamer{secheader}{\beamer@secheadertrue}
+\ProcessOptionsBeamer
+
+\useoutertheme[footline=authorinstitutetitle,subsection=false]{smoothbars}
+\makeatletter % [add curpage/total page at the bottom](http://tex.stackexchange.com/questions/100838/beamer-dresden-theme-miniframes-appeareance-and-frame-number-insertion)
+\newcommand{\frameofframes}{/}
+\newcommand{\setframeofframes}[1]{\renewcommand{\frameofframes}{#1}}
+\setbeamertemplate{footline}
+  {%
+    \begin{beamercolorbox}[colsep=1.5pt]{upper separation line foot}
+    \end{beamercolorbox}
+    \begin{beamercolorbox}[ht=2.5ex,dp=1.125ex,%
+      leftskip=.3cm,rightskip=.3cm plus1fil]{author in head/foot}%
+      \leavevmode{\usebeamerfont{author in head/foot}计科（创）221 }%
+      \hfill%
+      {\usebeamerfont{author in head/foot}\usebeamercolor[fg]{author in head/foot}叶芷延}%
+    \end{beamercolorbox}%
+    \begin{beamercolorbox}[ht=2.5ex,dp=1.125ex,%
+      leftskip=.3cm,rightskip=.3cm plus1fil]{title in head/foot}%
+      {\usebeamerfont{title in head/foot}智行伴侣:一个面向个性化旅游规划的智能体系统 }%
+      \hfill%
+      {\usebeamerfont{frame number}\usebeamercolor[fg]{frame number}\insertframenumber~\frameofframes~\inserttotalframenumber}%
+    \end{beamercolorbox}%
+    \begin{beamercolorbox}[colsep=1.5pt]{lower separation line foot}
+    \end{beamercolorbox}
+  }
+\makeatother
+
+\useinnertheme{circles}           % 使用内主题 circles：标题、条目使用圆形项目符号。
+
+%\useoutertheme{default}
+%\useinnertheme[shadow=true]{rounded}
+
+\xdefinecolor{gzhuGreen}{HTML}{007f39}      % Guangzhou University standard green #009744
+\xdefinecolor{gzhuGreenDark}{HTML}{004c22}  % Deep green for strong bars #003c1b 最上和最下
+\xdefinecolor{gzhuGreenMid}{HTML}{ead489}   % Medium green for active accents #4db67c 没用到
+\xdefinecolor{gzhuGreenSoft}{HTML}{e8fd96}  % Soft green for shaded accents #b3e0c7 没用到
+\xdefinecolor{gzhuGreenPale}{HTML}{a1d76f}  % Pale green for subtle backgrounds #e6f5ec 没用到
+\colorlet{tsinghua}{gzhuGreen}                        % Backward-compatible theme color name
+\setbeamercolor{footline}{bg=gzhuGreen}               % 页脚背景
+\setbeamercolor{author in head/foot}{fg=white,bg=gzhuGreen}
+\setbeamercolor{title in head/foot}{fg=white,bg=gzhuGreenDark}
+\setbeamercolor{frame number}{fg=white,bg=gzhuGreenDark}
+\setbeamercolor{frametitle}{bg=gzhuGreen,fg=white}    % 每页标题背景、页标题文字
+\setbeamercolor{title}{bg=gzhuGreen}                  % 第一页的大标题背景
+\setbeamerfont{frametitle}{size=\large}               % 每页标题大小
+\setbeamertemplate{bibliography item}[text]           % 参考文献条目使用文本标记
+\setbeamertemplate{caption}[numbered]                 % 图表标题自动编号
+%% 定义四个调色板等级，用于不同层级的标题框、侧边栏等。
+\setbeamercolor{palette primary}{use=structure,fg=white,bg=structure.fg}  % 主调色板：文字、背景
+\setbeamercolor{palette secondary}{fg=white,bg=gzhuGreenDark}             % 二级调色板
+\setbeamercolor{palette tertiary}{fg=white,bg=gzhuGreenMid}               % 三级调色版
+\setbeamercolor{palette quaternary}{fg=white,bg=gzhuGreenDark}            % 四级调色板
+%\setbeamercolor*{sidebar}{use=structure,bg=structure.fg}
+\setbeamercolor{titlelike}{parent=palette primary}    % 标题类元素
+
+%% try 尝试性的主题颜色设置
+\setbeamercolor{block title}{bg=gzhuGreen,fg=white}   % 普通区块标题
+\setbeamercolor*{block title example}{use={normal text,example text},bg=white,fg=gzhuGreen} % 示例区块
+\setbeamercolor{fine separation line}{} % 细分割线颜色
+\setbeamercolor{item projected}{fg=white} % 枚举项目编号的颜色
+\setbeamercolor{palette sidebar primary}{use=normal text,fg=normal text.fg}
+\setbeamercolor{palette sidebar quaternary}{use=structure,fg=structure.fg}
+\setbeamercolor{palette sidebar secondary}{use=structure,fg=structure.fg}
+\setbeamercolor{palette sidebar tertiary}{use=normal text,fg=normal text.fg}
+%\setbeamercolor{palette sidebar quaternary}{fg=white}
+\setbeamercolor{section in sidebar}{fg=gzhuGreenDark}
+\setbeamercolor{section in sidebar shaded}{fg=grey}
+\setbeamercolor{separation line}{}
+\setbeamercolor{sidebar}{bg=gzhuGreen}
+\setbeamercolor{sidebar}{parent=palette primary}
+\setbeamercolor{structure}{fg=gzhuGreen}      % 设置Beamer结构色(structure.fg)为广州大学绿色。结构色会影响标题、项目符号、目录等元素。
+\setbeamercolor{subsection in sidebar}{fg=gzhuGreenDark}
+\setbeamercolor{subsection in sidebar shaded}{fg=grey}
+\AtBeginSection[]{
+	\begin{frame}
+		\tableofcontents[sectionstyle=show/shaded,subsectionstyle=show/shaded/hide,subsubsectionstyle=show/shaded/hide]
+	\end{frame}
+}
+\AtBeginSubsection[]{
+	\begin{frame}
+		\tableofcontents[sectionstyle=show/shaded,subsectionstyle=show/shaded/hide,subsubsectionstyle=show/shaded/hide]
+	\end{frame}
+}
+
+\mode
+<all>

@@ -1,0 +1,355 @@
+\documentclass[aspectratio=169]{beamer}
+
+\usepackage[fontset=fandol]{ctex}
+\usepackage{hyperref}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{xcolor}
+\usepackage{tikz}
+\definecolor{grey}{gray}{0.5}
+\usepackage{GZHU}
+
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric}
+
+\graphicspath{{pic/}{../thesis-media/media/}}
+
+\author{叶芷延}
+\title{智行伴侣}
+\subtitle{一个面向个性化旅游规划的智能体系统}
+\institute{
+广州大学 \quad 计算机科学与网络工程学院\newline
+计科（创）221\newline
+指导教师：肖亚铁
+}
+\date{2026年5月}
+
+\definecolor{softgreen}{RGB}{238,247,236}
+\colorlet{softpurple}{softgreen}
+\definecolor{darktext}{RGB}{39,39,46}
+\definecolor{mutedtext}{RGB}{91,96,105}
+\definecolor{riskred}{RGB}{190,64,55}
+\definecolor{riskorange}{RGB}{218,142,45}
+\definecolor{riskgreen}{RGB}{68,145,96}
+
+\setbeamerfont{title}{size=\Large,series=\bfseries,family=\heiti}
+\setbeamerfont{subtitle}{size=\normalsize}
+\setbeamerfont{frametitle}{size=\large,series=\bfseries,family=\heiti}
+
+\newcommand{\thesisimage}[2]{%
+  \IfFileExists{#1}{%
+    \includegraphics[#2]{#1}%
+  }{%
+    \fbox{\parbox[c][3.2cm][c]{0.85\linewidth}{\centering 图片占位：#1}}%
+  }%
+}
+
+\newcommand{\smalltag}[1]{%
+  \colorbox{softpurple}{\strut\hspace{0.55em}#1\hspace{0.55em}}%
+}
+
+\newcommand{\framehint}[1]{%
+  \vspace{0.2em}{\small\color{mutedtext}#1}%
+}
+
+\begin{document}
+\kaishu
+
+\begin{frame}
+  \titlepage
+  \vspace{-0.8em}
+  \begin{center}
+    \smalltag{大语言模型} \quad
+    \smalltag{多智能体} \quad
+    \smalltag{FastAPI} \quad
+    \smalltag{Vue 3} \quad
+    \smalltag{高德地图服务}
+  \end{center}
+\end{frame}
+
+\begin{frame}{汇报提纲}
+  \tableofcontents[sectionstyle=show,subsectionstyle=show/shaded/hide]
+\end{frame}
+
+\section{课题背景与目标}
+
+\begin{frame}{研究背景}
+  \begin{columns}[T]
+    \begin{column}{0.55\linewidth}
+      \begin{itemize}
+        \item 自由行规划需要同时整合天气、景点、酒店、路线、预算和用户偏好。
+        \item 传统平台以单点查询为主，用户仍需在多个应用之间切换和人工组合信息。
+        \item 单纯依赖大语言模型生成行程，容易出现事实不稳、路线折返和实时约束缺失。
+        \item 智能体与工具调用机制为“真实数据 + 约束规划 + 结构化输出”提供了实现路径。
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.38\linewidth}
+      \begin{block}{论文核心问题}
+        如何面向个性化自由行需求，生成一份可展示、可编辑、可导出的多日旅行计划。
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{研究目标与主要内容}
+  \begin{columns}[T]
+    \begin{column}{0.48\linewidth}
+      \begin{block}{研究目标}
+        \begin{itemize}
+          \item 提升旅行计划生成效率和个性化程度。
+          \item 降低模型编造景点、酒店或天气信息的风险。
+          \item 将天气风险、候选 POI 和预算约束纳入规划流程。
+        \end{itemize}
+      \end{block}
+    \end{column}
+    \begin{column}{0.48\linewidth}
+      \begin{block}{完成内容}
+        \begin{itemize}
+          \item 设计多智能体旅行规划后端。
+          \item 实现天气风险评估、结构化解析和安全回退。
+          \item 实现前端输入、地图可视化、行程编辑和导出。
+        \end{itemize}
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\section{系统设计}
+
+\begin{frame}{系统总体架构}
+  \begin{columns}[T]
+    \begin{column}{0.52\linewidth}
+      \centering
+      \thesisimage{image3.png}{width=\linewidth,height=0.72\textheight,keepaspectratio}
+    \end{column}
+    \begin{column}{0.42\linewidth}
+      \begin{itemize}
+        \item 前端展示层：需求输入、结果展示、地图可视化、编辑与导出。
+        \item 后端服务层：FastAPI 接口、参数校验、任务调度和统一响应。
+        \item 智能体协作层：天气、景点、酒店和行程规划四类 Agent。
+        \item 外部服务层：高德地图 MCP、地图 JS API、图片服务和大语言模型。
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{多智能体规划流程}
+  \centering
+  \begin{tikzpicture}[
+    node distance=0.75cm,
+    box/.style={rectangle,rounded corners,draw=tsinghua,fill=softpurple,align=center,minimum width=2.45cm,minimum height=0.72cm},
+    arr/.style={-Latex,thick,color=tsinghua}
+  ]
+    \node[box] (input) {用户旅行需求};
+    \node[box,right=of input] (weather) {天气查询\\Agent};
+    \node[box,right=of weather] (risk) {天气风险\\评估};
+    \node[box,below=of risk] (poi) {景点搜索\\Agent};
+    \node[box,left=of poi] (hotel) {酒店推荐\\Agent};
+    \node[box,left=of hotel] (plan) {行程规划\\Agent};
+    \node[box,below=of plan] (post) {解析校验\\后处理};
+    \node[box,right=of post] (view) {前端展示\\编辑导出};
+
+    \draw[arr] (input) -- (weather);
+    \draw[arr] (weather) -- (risk);
+    \draw[arr] (risk) -- (poi);
+    \draw[arr] (poi) -- (hotel);
+    \draw[arr] (hotel) -- (plan);
+    \draw[arr] (plan) -- (post);
+    \draw[arr] (post) -- (view);
+  \end{tikzpicture}
+
+  \framehint{流程特点：先通过工具获得真实候选数据，再由规划 Agent 综合约束生成结构化 JSON。}
+\end{frame}
+
+\begin{frame}{功能模块设计}
+  \begin{columns}[T]
+    \begin{column}{0.32\linewidth}
+      \begin{block}{输入侧}
+        \begin{itemize}
+          \item 目的地城市
+          \item 出行日期与天数
+          \item 交通与住宿偏好
+          \item 兴趣标签与额外要求
+        \end{itemize}
+      \end{block}
+    \end{column}
+    \begin{column}{0.32\linewidth}
+      \begin{block}{生成侧}
+        \begin{itemize}
+          \item 天气查询与风险分级
+          \item 景点与酒店候选获取
+          \item 结构化行程生成
+          \item 预算汇总与异常回退
+        \end{itemize}
+      \end{block}
+    \end{column}
+    \begin{column}{0.32\linewidth}
+      \begin{block}{展示侧}
+        \begin{itemize}
+          \item 每日行程卡片
+          \item 地图标记与路线展示
+          \item 景点编辑与排序
+          \item PNG/PDF 导出
+        \end{itemize}
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\section{系统实现}
+
+\begin{frame}{关键实现一：天气风险评估}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\linewidth}
+      \begin{table}
+        \small
+        \centering
+        \begin{tabular}{@{}lll@{}}
+          \toprule
+          风险因素 & 示例 & 处理策略 \\
+          \midrule
+          强降水/强对流 & 暴雨、雷阵雨 & 减少户外 \\
+          普通降水 & 小雨、阵雨 & 优先室内 \\
+          高温/低温 & 高温、低温 & 降低强度 \\
+          大风/低能见度 & 大风、雾、霾 & 减少跨区 \\
+          \bottomrule
+        \end{tabular}
+      \end{table}
+    \end{column}
+    \begin{column}{0.47\linewidth}
+      \begin{block}{分级结果}
+        \begin{itemize}
+          \item \textcolor{riskgreen}{低风险}：正常安排户外活动。
+          \item \textcolor{riskorange}{中风险}：安排同区域、可避雨景点。
+          \item \textcolor{riskred}{高风险}：优先室内或半室内景点。
+        \end{itemize}
+      \end{block}
+      \framehint{风险等级会同时进入景点搜索提示词、行程规划提示词和前端结果展示。}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{关键实现二：结构化输出与后处理}
+  \begin{columns}[T]
+    \begin{column}{0.48\linewidth}
+      \begin{block}{结构化字段}
+        \begin{itemize}
+          \item 城市、开始日期、结束日期。
+          \item 每日景点、餐饮、酒店、交通方式。
+          \item 天气信息、规划建议和预算汇总。
+          \item 校验状态、警告信息和安全回退标记。
+        \end{itemize}
+      \end{block}
+    \end{column}
+    \begin{column}{0.48\linewidth}
+      \begin{block}{后处理逻辑}
+        \begin{itemize}
+          \item 解析模型输出中的 JSON 内容。
+          \item 补齐缺失日期、餐饮和预算字段。
+          \item 校验景点候选池和坐标可用性。
+          \item 失败时返回可展示的安全回退行程。
+        \end{itemize}
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{关键实现三：前端展示与地图可视化}
+  \begin{columns}[T]
+    \begin{column}{0.5\linewidth}
+      \centering
+      \thesisimage{image22.png}{width=\linewidth,height=0.68\textheight,keepaspectratio}
+    \end{column}
+    \begin{column}{0.44\linewidth}
+      \begin{itemize}
+        \item 前端基于 Vue 3、TypeScript 和 Vite 实现。
+        \item 结果页按日期展示行程、天气、酒店、餐饮和预算。
+        \item 使用高德地图展示景点与酒店标记，辅助检查空间分布。
+        \item 支持景点编辑、删除、排序，以及 PNG/PDF 导出。
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\section{测试与总结}
+
+\begin{frame}{测试设计与结果}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\linewidth}
+      \begin{block}{测试范围}
+        \begin{itemize}
+          \item 旅行需求输入与参数校验。
+          \item 行程规划接口与结构化返回。
+          \item 天气解析、风险分级和后处理校验。
+          \item 结果展示、地图可视化、编辑和导出。
+        \end{itemize}
+      \end{block}
+    \end{column}
+    \begin{column}{0.48\linewidth}
+      \begin{table}
+        \small
+        \centering
+        \begin{tabular}{@{}lccc@{}}
+          \toprule
+          类别 & 用例数 & 通过数 & 通过率 \\
+          \midrule
+          功能测试 & 15 & 15 & 100\% \\
+          异常输入测试 & 15 & 15 & 100\% \\
+          \midrule
+          合计 & 30 & 30 & 100\% \\
+          \bottomrule
+        \end{tabular}
+      \end{table}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{项目特色}
+  \begin{columns}[T]
+    \begin{column}{0.31\linewidth}
+      \begin{block}{任务拆解}
+        多智能体分别负责天气、景点、酒店和最终规划，降低复杂任务混乱度。
+      \end{block}
+    \end{column}
+    \begin{column}{0.31\linewidth}
+      \begin{block}{真实数据}
+        接入地图和天气工具，以候选数据约束模型生成结果。
+      \end{block}
+    \end{column}
+    \begin{column}{0.31\linewidth}
+      \begin{block}{工程闭环}
+        结构化输出、后处理校验、地图展示、编辑导出形成完整使用链路。
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{总结与展望}
+  \begin{columns}[T]
+    \begin{column}{0.48\linewidth}
+      \begin{block}{工作总结}
+        本文完成了一个面向个性化旅行规划的多智能体系统，实现了从用户需求输入到结构化行程生成、地图展示、编辑导出的基本流程。
+      \end{block}
+    \end{column}
+    \begin{column}{0.48\linewidth}
+      \begin{block}{后续展望}
+        \begin{itemize}
+          \item 引入营业时间、门票预约和实时交通信息。
+          \item 支持根据用户编辑结果进行局部重新规划。
+          \item 改进天气风险模型与系统评价指标。
+        \end{itemize}
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}
+  \begin{center}
+    {\Huge 谢谢！}\\[1.5em]
+    {\large 恳请各位老师批评指正}
+  \end{center}
+\end{frame}
+
+\end{document}

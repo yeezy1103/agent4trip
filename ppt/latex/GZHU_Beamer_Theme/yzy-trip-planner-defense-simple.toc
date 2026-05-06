@@ -1,0 +1,4 @@
+\beamer@sectionintoc {1}{课题背景与目标}{3}{0}{1}
+\beamer@sectionintoc {2}{系统设计}{6}{0}{2}
+\beamer@sectionintoc {3}{系统实现}{10}{0}{3}
+\beamer@sectionintoc {4}{测试与总结}{14}{0}{4}
