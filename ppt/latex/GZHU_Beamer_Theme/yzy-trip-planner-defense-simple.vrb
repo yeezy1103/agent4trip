@@ -1,0 +1,29 @@
+\frametitle{关键实现一：Agent的实现\hfill {\small 工具调用底层逻辑}}
+\begin{center}
+    \begin{tikzpicture}[
+      node distance=1.15cm,
+      box/.style={draw=gzhuGreenMid, rounded corners=2pt, align=center, minimum width=2.7cm, minimum height=0.78cm, font=\small},
+      arrow/.style={-Latex, thick, color=gzhuGreenMid}
+    ]
+      \node[box] (agent) {LLM\\生成工具标记\\\texttt{[TOOL\_CALL:工具名:参数]}};
+      \node[box, right=of agent] (parser) {SimpleAgent\\正则解析工具名和参数};
+      \node[box, right=of parser] (tool) {ToolRegistry\\查工具};
+      \node[box, below=of tool] (server) {tool.run\\执行工具};
+      \node[box, left=of server] (result) {SimpleAgent\\返回工具结果};
+      \node[box, left=of result] (final) {LLM\\基于工具结果生成结构化输出};
+
+      \draw[arrow] (agent) -- (parser);
+      \draw[arrow] (parser) -- (tool);
+      \draw[arrow] (tool) -- (server);
+      \draw[arrow] (server) -- (result);
+      \draw[arrow] (result) -- (final);
+    \end{tikzpicture}
+  \end{center}
+
+  \vspace{0.4em}
+  \begin{block}{项目中的工具标记}
+    \small
+    \texttt{[TOOL\_CALL:amap\_maps\_text\_search:keywords=历史文化,city=广州]}\\
+    \texttt{[TOOL\_CALL:amap\_maps\_weather:city=广州]}
+  \end{block}
+  \framehint{Agent 只需要输出工具调用标记；解析、进程通信、HTTP 请求和结果回传由 HelloAgents 的工具系统完成。}
